@@ -27,7 +27,7 @@ func PrivateKeyToString(priv *ecdsa.PrivateKey) string {
 	return base64.StdEncoding.EncodeToString(pubKeyByte)
 }
 
-func StringToPrivateKey(stringd string) (*ecdsa.PrivateKey, error) {
+func StrBase64ToPrivateKey(stringd string) (*ecdsa.PrivateKey, error) {
 	d, err := base64.StdEncoding.DecodeString(stringd)
 	if err != nil {
 		return nil, err
@@ -50,7 +50,7 @@ func StringToPrivateKey(stringd string) (*ecdsa.PrivateKey, error) {
 	return priv, nil
 }
 
-func StringToPublicKey(pub string) (*ecdsa.PublicKey, error) {
+func StrBase64ToPublicKey(pub string) (*ecdsa.PublicKey, error) {
 	if len(pub) == 0 {
 		return nil, errors.New("input error")
 	}
