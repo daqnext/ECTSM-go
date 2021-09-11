@@ -1,6 +1,7 @@
 package example
 
 import (
+	ecthttp "github.com/daqnext/ECTSM-go/http"
 	"github.com/daqnext/ECTSM-go/http/server"
 	"github.com/daqnext/ECTSM-go/utils"
 	"github.com/labstack/echo/v4"
@@ -88,7 +89,7 @@ func handlerGetTest(c echo.Context) error {
 	}
 
 	//response data encrypt
-	sendData, err := hs.EncryptResponseBody(data, symmetricKey)
+	sendData, err := ecthttp.EncryptBody(data, symmetricKey)
 	if err != nil {
 		c.String(500, "encrypt response data error")
 		return nil
@@ -110,7 +111,7 @@ func handlerPostTest(c echo.Context) error {
 	log.Println(timeStamp)
 
 	//decrypt body
-	bodyByte, err := hs.DecryptBody(c.Request().Body, symmetricKey)
+	bodyByte, err := ecthttp.DecryptBody(c.Request().Body, symmetricKey)
 	if err != nil {
 		c.String(500, "decrypt body error")
 	}
@@ -127,7 +128,7 @@ func handlerPostTest(c echo.Context) error {
 		Data:   nil,
 	}
 
-	sendData, err := hs.EncryptResponseBody(data, symmetricKey)
+	sendData, err := ecthttp.EncryptBody(data, symmetricKey)
 	if err != nil {
 		c.String(500, "encrypt response data error")
 		return nil

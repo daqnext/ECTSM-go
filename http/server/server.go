@@ -3,12 +3,9 @@ package server
 import (
 	"crypto/ecdsa"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"github.com/daqnext/ECTSM-go/utils"
 	"github.com/daqnext/go-fast-cache"
-	"io"
-	"io/ioutil"
 	"net/http"
 )
 
@@ -85,32 +82,4 @@ func (hs *EctHttpServer) CheckHeader(header http.Header) (symmetricKey []byte, t
 	timeStamp = utils.BytesToInt64(timeB)
 
 	return symmetricKey, timeStamp, nil
-}
-
-func (hs *EctHttpServer) DecryptBody(body io.ReadCloser, randKey []byte) ([]byte, error) {
-	buf, err := ioutil.ReadAll(body)
-	if err != nil {
-		return nil, err
-	}
-
-	//decrypt
-	bufDecrypted, err := utils.AESDecrypt(buf, randKey)
-	if err != nil {
-		return nil, err
-	}
-	//str:=base64.StdEncoding.EncodeToString(bufDecrypted)
-	return bufDecrypted, nil
-}
-
-func (hs *EctHttpServer) EncryptResponseBody(data interface{}, randKey []byte) ([]byte, error) {
-	dataByte, err := json.Marshal(data)
-	if err != nil {
-		return nil, err
-	}
-
-	sendData, err := utils.AESEncrypt(dataByte, randKey)
-	if err != nil {
-		return nil, err
-	}
-	return sendData, nil
 }

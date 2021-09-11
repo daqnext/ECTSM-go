@@ -3,10 +3,11 @@ package client
 import (
 	"crypto/ecdsa"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
+	ecthttp "github.com/daqnext/ECTSM-go/http"
 	"github.com/daqnext/ECTSM-go/utils"
 	"github.com/imroc/req"
+	"math/rand"
 	"time"
 )
 
@@ -24,6 +25,7 @@ type RequestConfig struct {
 }
 
 func New(publicKeyUrl string) (*EctHttpClient, error) {
+	rand.Seed(time.Now().UnixNano())
 	hc := &EctHttpClient{
 		PublicKeyUrl: publicKeyUrl,
 	}
@@ -76,49 +78,13 @@ func (hc *EctHttpClient) SetUserToken(token string) {
 	}
 }
 
-func (hc *EctHttpClient) genECTHeader() (req.Header, error) {
-	header := req.Header{}
-	if hc.Token != "" {
-		header["Authorization"] = hc.Token
-	}
-
-	//sign
-	if hc.EcsKey == "" {
-		encrypted, err := utils.ECCEncrypt(hc.PublicKeyEc, hc.SymmetricKey)
-		if err != nil {
-			return nil, err
-		}
-		hc.EcsKey = base64.StdEncoding.EncodeToString(encrypted)
-	}
-	header["Ecs"] = hc.EcsKey
-
-	//time stamp
-	nowTime := time.Now().Unix()
-	encrypted, err := utils.AESEncrypt(utils.Int64ToBytes(nowTime), hc.SymmetricKey)
-	if err != nil {
-		return header, err
-	}
-	timeStamp := base64.StdEncoding.EncodeToString(encrypted)
-	header["Timestamp"] = timeStamp
-
-	return header, nil
-}
-
-func (hc *EctHttpClient) genECTBody(bodyObj interface{}) ([]byte, error) {
-	bodyByte, err := json.Marshal(bodyObj)
-	if err != nil {
-		return nil, err
-	}
-	return utils.AESEncrypt(bodyByte, hc.SymmetricKey)
-}
-
 func (hc *EctHttpClient) ECTGet(url string, v ...interface{}) (reqResp *req.Resp, decryptBody []byte, err error) {
 	return hc.ECTGetWithConfig(url, &RequestConfig{TimeoutSec: 30}, v)
 }
 
 func (hc *EctHttpClient) ECTGetWithConfig(url string, config *RequestConfig, v ...interface{}) (reqResp *req.Resp, decryptBody []byte, err error) {
 	//header
-	header, err := hc.genECTHeader()
+	header, err := ecthttp.GenECTHeader(hc.Token, hc.EcsKey, hc.SymmetricKey)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -153,7 +119,7 @@ func (hc *EctHttpClient) ECTPost(url string, obj interface{}, v ...interface{}) 
 
 func (hc *EctHttpClient) ECTPostWithConfig(url string, config *RequestConfig, obj interface{}, v ...interface{}) (reqResp *req.Resp, decryptBody []byte, err error) {
 	//header
-	header, err := hc.genECTHeader()
+	header, err := ecthttp.GenECTHeader(hc.Token, hc.EcsKey, hc.SymmetricKey)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -167,12 +133,7 @@ func (hc *EctHttpClient) ECTPostWithConfig(url string, config *RequestConfig, ob
 		header["Authorization"] = config.Token
 	}
 
-	b, e := json.Marshal(obj)
-	if e != nil {
-		return nil, nil, err
-	}
-
-	bodySend, err := utils.AESEncrypt(b, hc.SymmetricKey)
+	bodySend, err := ecthttp.EncryptBody(obj, hc.SymmetricKey)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -185,7 +146,8 @@ func (hc *EctHttpClient) ECTPostWithConfig(url string, config *RequestConfig, ob
 	if rs.Response().StatusCode != 200 {
 		return rs, nil, nil
 	}
-	data, err := utils.AESDecrypt(rs.Bytes(), hc.SymmetricKey)
+
+	data, err := ecthttp.DecryptBody(rs.Response().Body, hc.SymmetricKey)
 	if err != nil {
 		return rs, nil, errors.New("decrypt error")
 	}
