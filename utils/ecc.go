@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
+	"log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/math"
@@ -78,4 +79,19 @@ func ECCEncrypt(ecdsaPublicKey *ecdsa.PublicKey, rawMsg []byte) ([]byte, error) 
 func ECCDecrypt(prik *ecdsa.PrivateKey, ct []byte) ([]byte, error) {
 	ecies_prv2 := ecies.ImportECDSA(prik)
 	return ecies_prv2.Decrypt(ct, nil, nil)
+}
+
+func GenAndPrintEccKeyPair() (privateKeyBase64Str string, publicKeyBase64Str string, err error) {
+	privateKey, err := GenSecp256k1KeyPair()
+	if err != nil {
+		return "", "", err
+	}
+	privateKeyBase64Str = PrivateKeyToString(privateKey)
+	publicKey := &privateKey.PublicKey
+	publicKeyBase64Str = PublicKeyToString(publicKey)
+
+	log.Println("private key base64:", privateKeyBase64Str)
+	log.Println("public key base64:", publicKeyBase64Str)
+
+	return privateKeyBase64Str, publicKeyBase64Str, nil
 }
