@@ -79,28 +79,10 @@ func (hs *EctHttpServer) CheckHeader(header http.Header) (symmetricKey []byte, t
 		symmetricKey = ecsByte.([]byte)
 	}
 
-	//timeStamp
-	timeS, exist := header["Timestamp"]
-	if !exist {
-		e = errors.New("timestamp not exist")
-		return symmetricKey, 0, e
-	}
-	if len(timeS) < 1 || timeS[0] == "" {
-		e = errors.New("timestamp error")
-		return nil, 0, e
-	}
-	timeStampBase64Str := timeS[0]
-	timeByte, err := base64.StdEncoding.DecodeString(timeStampBase64Str)
+	timeStamp, err := ecthttp.DecryptTimestamp(header, symmetricKey)
 	if err != nil {
-		e = errors.New("timestamp error")
 		return symmetricKey, 0, e
 	}
-	timeB, err := utils.AESDecrypt(timeByte, symmetricKey)
-	if err != nil {
-		e = errors.New("sign error")
-		return symmetricKey, 0, e
-	}
-	timeStamp = utils.BytesToInt64(timeB)
 
 	return symmetricKey, timeStamp, nil
 }

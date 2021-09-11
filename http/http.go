@@ -3,34 +3,69 @@ package http
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"github.com/daqnext/ECTSM-go/utils"
-	"github.com/imroc/req"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"time"
 )
 
-func GenECTHeader(token string, ecsKey string, symmetricKey []byte) (req.Header, error) {
-	header := req.Header{}
+func GenECTHeader(token string, ecsKey string, symmetricKey []byte) (http.Header, error) {
+	header := make(http.Header)
 	if token != "" {
-		header["Authorization"] = token
+		header.Set("Authorization", token)
 	}
 
 	//sign
 	if ecsKey != "" {
-		header["Ecs"] = ecsKey
+		header.Set("Ecs", ecsKey)
 	}
 
 	//time stamp
-	nowTime := time.Now().Unix()
-	encrypted, err := utils.AESEncrypt(utils.Int64ToBytes(nowTime), symmetricKey)
+	err := SetECTResponseTimestamp(header, symmetricKey)
 	if err != nil {
 		return header, err
 	}
-	timeStamp := base64.StdEncoding.EncodeToString(encrypted)
-	header["Timestamp"] = timeStamp
 
 	return header, nil
+}
+
+func SetECTResponseTimestamp(header http.Header, symmetricKey []byte) error {
+	nowTime := time.Now().Unix()
+	encrypted, err := utils.AESEncrypt(utils.Int64ToBytes(nowTime), symmetricKey)
+	if err != nil {
+		return err
+	}
+	timeStamp := base64.StdEncoding.EncodeToString(encrypted)
+	header.Set("Ecttimestamp", timeStamp)
+	return nil
+}
+
+func DecryptTimestamp(header http.Header, symmetricKey []byte) (timeStamp int64, e error) {
+	//timeStamp
+	timeS, exist := header["Ecttimestamp"]
+	if !exist {
+		e = errors.New("timestamp not exist")
+		return 0, e
+	}
+	if len(timeS) < 1 || timeS[0] == "" {
+		e = errors.New("timestamp error")
+		return 0, e
+	}
+	timeStampBase64Str := timeS[0]
+	timeByte, err := base64.StdEncoding.DecodeString(timeStampBase64Str)
+	if err != nil {
+		e = errors.New("timestamp error")
+		return 0, e
+	}
+	timeB, err := utils.AESDecrypt(timeByte, symmetricKey)
+	if err != nil {
+		e = errors.New("decrypt timestamp error")
+		return 0, e
+	}
+	timeStamp = utils.BytesToInt64(timeB)
+	return timeStamp, nil
 }
 
 func DecryptBody(body io.ReadCloser, randKey []byte) ([]byte, error) {

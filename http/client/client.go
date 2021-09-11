@@ -100,7 +100,19 @@ func (hc *EctHttpClient) ECTGetWithConfig(url string, config *RequestConfig, v .
 		return rs, nil, nil
 	}
 
-	data, err := utils.AESDecrypt(rs.Bytes(), hc.SymmetricKey)
+	//check response timestamp
+	timeStamp, err := ecthttp.DecryptTimestamp(rs.Response().Header, hc.SymmetricKey)
+	if err != nil {
+		return rs, nil, err
+	}
+	nowTime := time.Now().Unix()
+	gap := nowTime - timeStamp
+	if gap < -30 || gap > 30 {
+		return rs, nil, errors.New("timestamp error, timeout")
+	}
+
+	//decrypt response body
+	data, err := ecthttp.DecryptBody(rs.Response().Body, hc.SymmetricKey)
 	if err != nil {
 		return rs, nil, errors.New("decrypt error")
 	}
@@ -141,6 +153,18 @@ func (hc *EctHttpClient) ECTPostWithConfig(url string, config *RequestConfig, ob
 		return rs, nil, nil
 	}
 
+	//check response timestamp
+	timeStamp, err := ecthttp.DecryptTimestamp(rs.Response().Header, hc.SymmetricKey)
+	if err != nil {
+		return rs, nil, err
+	}
+	nowTime := time.Now().Unix()
+	gap := nowTime - timeStamp
+	if gap < -30 || gap > 30 {
+		return rs, nil, errors.New("timestamp error, timeout")
+	}
+
+	//decrypt response body
 	data, err := ecthttp.DecryptBody(rs.Response().Body, hc.SymmetricKey)
 	if err != nil {
 		return rs, nil, errors.New("decrypt error")

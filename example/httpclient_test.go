@@ -33,6 +33,8 @@ func HttpRequest() {
 		log.Println(err)
 		return
 	}
+	header := r.Response().Header
+	log.Println(header["Aaa"])
 	log.Println("status", r.Response().StatusCode)
 	log.Println("get request reponse", string(responseData))
 
