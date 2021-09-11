@@ -1,14 +1,15 @@
 package example
 
 import (
-	ecthttp "github.com/daqnext/ECTSM-go/http"
-	"github.com/daqnext/ECTSM-go/http/server"
-	"github.com/daqnext/ECTSM-go/utils"
-	"github.com/labstack/echo/v4"
 	"log"
 	"net/http"
 	"testing"
 	"time"
+
+	ecthttp "github.com/daqnext/ECTSM-go/http"
+	"github.com/daqnext/ECTSM-go/http/server"
+	"github.com/daqnext/ECTSM-go/utils"
+	"github.com/labstack/echo/v4"
 )
 
 var privateKeyBase64Str = "bhbb4EC96zx2uUsWDtSYivzaZUzdeDKMfn+dSV9VwUI="
@@ -99,23 +100,17 @@ func handlerGetTest(c echo.Context) error {
 }
 
 func handlerPostTest(c echo.Context) error {
-	//check header
-	symmetricKey, timeStamp, err := hs.CheckHeader(c.Request().Header)
+
+	symmetricKey, timeStamp, decryptedBody, err := hs.HandlePost(c.Request().Header, c.Request().Body)
 	if err != nil {
-		c.String(500, "decrypt header error")
+		c.String(500, "decrypt header error:")
 	}
 
-	//do something
-	//...
+	//print result
 	log.Println(string(symmetricKey))
 	log.Println(timeStamp)
+	log.Println(string(decryptedBody))
 
-	//decrypt body
-	bodyByte, err := ecthttp.DecryptBody(c.Request().Body, symmetricKey)
-	if err != nil {
-		c.String(500, "decrypt body error")
-	}
-	log.Println("get post body:", string(bodyByte))
 	//responseData example
 	type responseData struct {
 		Status int
@@ -133,6 +128,7 @@ func handlerPostTest(c echo.Context) error {
 		c.String(500, "encrypt response data error")
 		return nil
 	}
+
 	c.JSONBlob(200, sendData)
 	return nil
 }

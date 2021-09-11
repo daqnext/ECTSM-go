@@ -4,11 +4,12 @@ import (
 	"crypto/ecdsa"
 	"encoding/base64"
 	"errors"
+	"math/rand"
+	"time"
+
 	ecthttp "github.com/daqnext/ECTSM-go/http"
 	"github.com/daqnext/ECTSM-go/utils"
 	"github.com/imroc/req"
-	"math/rand"
-	"time"
 )
 
 type EctHttpClient struct {
@@ -16,7 +17,6 @@ type EctHttpClient struct {
 	SymmetricKey []byte
 	PublicKeyEc  *ecdsa.PublicKey
 	EcsKey       string
-	Token        string
 }
 
 type RequestConfig struct {
@@ -72,19 +72,17 @@ func New(publicKeyUrl string) (*EctHttpClient, error) {
 	return hc, nil
 }
 
-func (hc *EctHttpClient) SetUserToken(token string) {
-	if token != "" {
-		hc.Token = token
-	}
+func (hc *EctHttpClient) ECTGet(url string, v ...interface{}) (reqResp *req.Resp, decryptBody []byte, err error) {
+	return hc.ECTGetWithConfig(url, &RequestConfig{TimeoutSec: 30, Token: ""}, v)
 }
 
-func (hc *EctHttpClient) ECTGet(url string, v ...interface{}) (reqResp *req.Resp, decryptBody []byte, err error) {
-	return hc.ECTGetWithConfig(url, &RequestConfig{TimeoutSec: 30}, v)
+func (hc *EctHttpClient) ECTGetWithToken(url string, userToken string, v ...interface{}) (reqResp *req.Resp, decryptBody []byte, err error) {
+	return hc.ECTGetWithConfig(url, &RequestConfig{TimeoutSec: 30, Token: userToken}, v)
 }
 
 func (hc *EctHttpClient) ECTGetWithConfig(url string, config *RequestConfig, v ...interface{}) (reqResp *req.Resp, decryptBody []byte, err error) {
 	//header
-	header, err := ecthttp.GenECTHeader(hc.Token, hc.EcsKey, hc.SymmetricKey)
+	header, err := ecthttp.GenECTHeader(config.Token, hc.EcsKey, hc.SymmetricKey)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -92,10 +90,6 @@ func (hc *EctHttpClient) ECTGetWithConfig(url string, config *RequestConfig, v .
 	r := req.New()
 	if config != nil && config.TimeoutSec > 0 {
 		r.SetTimeout(time.Duration(config.TimeoutSec) * time.Second)
-	}
-
-	if config != nil && config.Token != "" {
-		header["Authorization"] = config.Token
 	}
 
 	rs, err := r.Get(url, header, v)
@@ -114,12 +108,16 @@ func (hc *EctHttpClient) ECTGetWithConfig(url string, config *RequestConfig, v .
 }
 
 func (hc *EctHttpClient) ECTPost(url string, obj interface{}, v ...interface{}) (reqResp *req.Resp, decryptBody []byte, err error) {
-	return hc.ECTPostWithConfig(url, &RequestConfig{TimeoutSec: 30}, obj, v)
+	return hc.ECTPostWithConfig(url, &RequestConfig{TimeoutSec: 30, Token: ""}, obj, v)
+}
+
+func (hc *EctHttpClient) ECTPostWithToken(url string, userToken string, obj interface{}, v ...interface{}) (reqResp *req.Resp, decryptBody []byte, err error) {
+	return hc.ECTPostWithConfig(url, &RequestConfig{TimeoutSec: 30, Token: userToken}, obj, v)
 }
 
 func (hc *EctHttpClient) ECTPostWithConfig(url string, config *RequestConfig, obj interface{}, v ...interface{}) (reqResp *req.Resp, decryptBody []byte, err error) {
 	//header
-	header, err := ecthttp.GenECTHeader(hc.Token, hc.EcsKey, hc.SymmetricKey)
+	header, err := ecthttp.GenECTHeader(config.Token, hc.EcsKey, hc.SymmetricKey)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -127,10 +125,6 @@ func (hc *EctHttpClient) ECTPostWithConfig(url string, config *RequestConfig, ob
 	r := req.New()
 	if config != nil && config.TimeoutSec > 0 {
 		r.SetTimeout(time.Duration(config.TimeoutSec) * time.Second)
-	}
-
-	if config != nil && config.Token != "" {
-		header["Authorization"] = config.Token
 	}
 
 	bodySend, err := ecthttp.EncryptBody(obj, hc.SymmetricKey)

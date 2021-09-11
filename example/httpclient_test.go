@@ -1,9 +1,10 @@
 package example
 
 import (
-	"github.com/daqnext/ECTSM-go/http/client"
 	"log"
 	"testing"
+
+	"github.com/daqnext/ECTSM-go/http/client"
 )
 
 func Test_request(t *testing.T) {
@@ -17,12 +18,11 @@ func HttpRequest() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	hc.SetUserToken("usertoken") //for optional
 
 	//get
 	url := "http://127.0.0.1:8080/test/get"
-	//send request with default timeout
-	r, responseData, err := hc.ECTGet(url)
+	//send request with default timeout and token 'usertoken'
+	r, responseData, err := hc.ECTGetWithToken(url, "usertoken")
 	//or use hc.ECTGetWithConfig() for custom config
 	//type RequestConfig struct {
 	//	Token      string

@@ -4,9 +4,12 @@ import (
 	"crypto/ecdsa"
 	"encoding/base64"
 	"errors"
-	"github.com/daqnext/ECTSM-go/utils"
-	"github.com/daqnext/go-fast-cache"
+	"io"
 	"net/http"
+
+	ecthttp "github.com/daqnext/ECTSM-go/http"
+	"github.com/daqnext/ECTSM-go/utils"
+	go_fast_cache "github.com/daqnext/go-fast-cache"
 )
 
 type EctHttpServer struct {
@@ -27,6 +30,24 @@ func New(privateKeyBase64Str string) (*EctHttpServer, error) {
 	hs.Cache = lc
 
 	return hs, nil
+}
+
+func (hs *EctHttpServer) HandlePost(header http.Header, body io.ReadCloser) (symmetricKey []byte, timeStamp int64, decryptedBody []byte, e error) {
+
+	//check header
+	symmetricKey, timeStamp, err := hs.CheckHeader(header)
+	if err != nil {
+		return nil, 0, nil, err
+	}
+
+	//decrypt body
+	decryptedBody, err = ecthttp.DecryptBody(body, symmetricKey)
+	if err != nil {
+		return nil, 0, nil, err
+	}
+
+	return symmetricKey, timeStamp, decryptedBody, nil
+
 }
 
 func (hs *EctHttpServer) CheckHeader(header http.Header) (symmetricKey []byte, timeStamp int64, e error) {
