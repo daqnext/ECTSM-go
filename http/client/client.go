@@ -24,6 +24,9 @@ type RequestConfig struct {
 	TimeoutSec int
 }
 
+const allowRequestTimeGapSec = 180
+const allowServerClientTimeGap = 30
+
 func New(publicKeyUrl string) (*EctHttpClient, error) {
 	rand.Seed(time.Now().UnixNano())
 	hc := &EctHttpClient{
@@ -49,8 +52,7 @@ func New(publicKeyUrl string) (*EctHttpClient, error) {
 	//time
 	nowTime := time.Now().Unix()
 	timeGap := nowTime - responseData.UnixTime
-	//todo how to handle delay
-	if timeGap < -30 || timeGap > 30 {
+	if timeGap < -allowServerClientTimeGap || timeGap > allowServerClientTimeGap {
 		return nil, errors.New("time error")
 	}
 
@@ -107,7 +109,7 @@ func (hc *EctHttpClient) ECTGetWithConfig(url string, config *RequestConfig, v .
 	}
 	nowTime := time.Now().Unix()
 	gap := nowTime - timeStamp
-	if gap < -30 || gap > 30 {
+	if gap < -allowRequestTimeGapSec || gap > allowRequestTimeGapSec {
 		return rs, nil, errors.New("timestamp error, timeout")
 	}
 
@@ -160,7 +162,7 @@ func (hc *EctHttpClient) ECTPostWithConfig(url string, config *RequestConfig, ob
 	}
 	nowTime := time.Now().Unix()
 	gap := nowTime - timeStamp
-	if gap < -30 || gap > 30 {
+	if gap < -allowRequestTimeGapSec || gap > allowRequestTimeGapSec {
 		return rs, nil, errors.New("timestamp error, timeout")
 	}
 

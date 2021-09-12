@@ -23,7 +23,7 @@ func GenECTHeader(token string, ecsKey string, symmetricKey []byte) (http.Header
 	}
 
 	//time stamp
-	err := SetECTResponseTimestamp(header, symmetricKey)
+	err := SetECTTimestamp(header, symmetricKey)
 	if err != nil {
 		return header, err
 	}
@@ -31,7 +31,22 @@ func GenECTHeader(token string, ecsKey string, symmetricKey []byte) (http.Header
 	return header, nil
 }
 
-func SetECTResponseTimestamp(header http.Header, symmetricKey []byte) error {
+func SetECTResponse(header http.Header, data interface{}, symmetricKey []byte) ([]byte, error) {
+	//set response header timestamp
+	err := SetECTTimestamp(header, symmetricKey)
+	if err != nil {
+		return nil, errors.New("encrypt response header error")
+	}
+
+	//response data encrypt
+	sendData, err := EncryptBody(data, symmetricKey)
+	if err != nil {
+		return nil, errors.New("encrypt response data error")
+	}
+	return sendData, nil
+}
+
+func SetECTTimestamp(header http.Header, symmetricKey []byte) error {
 	nowTime := time.Now().Unix()
 	encrypted, err := utils.AESEncrypt(utils.Int64ToBytes(nowTime), symmetricKey)
 	if err != nil {

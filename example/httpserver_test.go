@@ -89,17 +89,9 @@ func handlerGetTest(c echo.Context) error {
 		Data:   nil,
 	}
 
-	//set response header timestamp
-	err = ecthttp.SetECTResponseTimestamp(c.Response().Header(), symmetricKey)
+	sendData, err := ecthttp.SetECTResponse(c.Response().Header(), data, symmetricKey)
 	if err != nil {
-		c.String(500, "encrypt response header error")
-		return nil
-	}
-
-	//response data encrypt
-	sendData, err := ecthttp.EncryptBody(data, symmetricKey)
-	if err != nil {
-		c.String(500, "encrypt response data error")
+		c.String(500, err.Error())
 		return nil
 	}
 	c.JSONBlob(200, sendData)
@@ -130,20 +122,11 @@ func handlerPostTest(c echo.Context) error {
 		Data:   nil,
 	}
 
-	//set response header timestamp
-	err = ecthttp.SetECTResponseTimestamp(c.Response().Header(), symmetricKey)
+	sendData, err := ecthttp.SetECTResponse(c.Response().Header(), data, symmetricKey)
 	if err != nil {
-		c.String(500, "encrypt response header error")
+		c.String(500, err.Error())
 		return nil
 	}
-
-	//response data encrypt
-	sendData, err := ecthttp.EncryptBody(data, symmetricKey)
-	if err != nil {
-		c.String(500, "encrypt response data error")
-		return nil
-	}
-
 	c.JSONBlob(200, sendData)
 	return nil
 }
