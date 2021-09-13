@@ -89,7 +89,7 @@ func handlerGetTest(c echo.Context) error {
 		Data:   nil,
 	}
 
-	sendData, err := ecthttp.SetECTResponse(c.Response().Header(), data, symmetricKey)
+	sendData, err := ecthttp.ECTResponse(c.Response().Header(), data, symmetricKey)
 	if err != nil {
 		c.String(500, err.Error())
 		return nil
@@ -122,7 +122,7 @@ func handlerPostTest(c echo.Context) error {
 		Data:   nil,
 	}
 
-	sendData, err := ecthttp.SetECTResponse(c.Response().Header(), data, symmetricKey)
+	sendData, err := ecthttp.ECTResponse(c.Response().Header(), data, symmetricKey)
 	if err != nil {
 		c.String(500, err.Error())
 		return nil

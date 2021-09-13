@@ -4,11 +4,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"github.com/daqnext/ECTSM-go/utils"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"github.com/daqnext/ECTSM-go/utils"
 )
 
 func GenECTHeader(token string, ecsKey string, symmetricKey []byte) (http.Header, error) {
@@ -23,7 +24,7 @@ func GenECTHeader(token string, ecsKey string, symmetricKey []byte) (http.Header
 	}
 
 	//time stamp
-	err := SetECTTimestamp(header, symmetricKey)
+	err := setECTTimestamp(header, symmetricKey)
 	if err != nil {
 		return header, err
 	}
@@ -31,22 +32,25 @@ func GenECTHeader(token string, ecsKey string, symmetricKey []byte) (http.Header
 	return header, nil
 }
 
-func SetECTResponse(header http.Header, data interface{}, symmetricKey []byte) ([]byte, error) {
+func ECTResponse(header http.Header, data interface{}, symmetricKey []byte) ([]byte, error) {
 	//set response header timestamp
-	err := SetECTTimestamp(header, symmetricKey)
+	err := setECTTimestamp(header, symmetricKey)
 	if err != nil {
 		return nil, errors.New("encrypt response header error")
 	}
 
-	//response data encrypt
-	sendData, err := EncryptBody(data, symmetricKey)
-	if err != nil {
-		return nil, errors.New("encrypt response data error")
+	if data != nil {
+		//response data encrypt
+		sendData, err := EncryptBody(data, symmetricKey)
+		if err != nil {
+			return nil, errors.New("encrypt response data error")
+		}
+		return sendData, nil
 	}
-	return sendData, nil
+	return nil, nil
 }
 
-func SetECTTimestamp(header http.Header, symmetricKey []byte) error {
+func setECTTimestamp(header http.Header, symmetricKey []byte) error {
 	nowTime := time.Now().Unix()
 	encrypted, err := utils.AESEncrypt(utils.Int64ToBytes(nowTime), symmetricKey)
 	if err != nil {
