@@ -21,9 +21,8 @@ func GenECTHeader(token string, ecsKey string, symmetricKey []byte) (http.Header
 		header.Set("Authorization", token)
 	}
 
-	//sign
 	if ecsKey != "" {
-		header.Set("Ecs", ecsKey)
+		header.Set("ecs", ecsKey)
 	}
 
 	//time stamp
@@ -60,13 +59,13 @@ func setECTTimestamp(header http.Header, symmetricKey []byte) error {
 		return err
 	}
 	timeStamp := base64.StdEncoding.EncodeToString(encrypted)
-	header.Set("Ecttimestamp", timeStamp)
+	header.Set("ecttimestamp", timeStamp)
 	return nil
 }
 
 func DecryptTimestamp(header http.Header, symmetricKey []byte) (timeStamp int64, e error) {
 	//timeStamp
-	timeS, exist := header["Ecttimestamp"]
+	timeS, exist := header["ecttimestamp"]
 	if !exist {
 		e = errors.New("timestamp not exist")
 		return 0, e

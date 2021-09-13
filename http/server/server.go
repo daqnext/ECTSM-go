@@ -53,7 +53,7 @@ func (hs *EctHttpServer) HandlePost(header http.Header, body io.ReadCloser) (sym
 
 func (hs *EctHttpServer) CheckHeader(header http.Header) (symmetricKey []byte, timeStamp int64, e error) {
 	//ecs
-	ecs, exist := header["Ecs"]
+	ecs, exist := header["ecs"]
 	if !exist {
 		e = errors.New("ecs not exist")
 		return nil, 0, e
