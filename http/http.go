@@ -12,6 +12,9 @@ import (
 	"github.com/daqnext/ECTSM-go/utils"
 )
 
+const AllowRequestTimeGapSec = 180
+const AllowServerClientTimeGap = 30
+
 func GenECTHeader(token string, ecsKey string, symmetricKey []byte) (http.Header, error) {
 	header := make(http.Header)
 	if token != "" {

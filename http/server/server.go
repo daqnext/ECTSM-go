@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"time"
 
 	ecthttp "github.com/daqnext/ECTSM-go/http"
 	"github.com/daqnext/ECTSM-go/utils"
@@ -82,6 +83,11 @@ func (hs *EctHttpServer) CheckHeader(header http.Header) (symmetricKey []byte, t
 	timeStamp, err := ecthttp.DecryptTimestamp(header, symmetricKey)
 	if err != nil {
 		return symmetricKey, 0, e
+	}
+	nowTime := time.Now().Unix()
+	gap := nowTime - timeStamp
+	if gap < -ecthttp.AllowRequestTimeGapSec || gap > ecthttp.AllowRequestTimeGapSec {
+		return symmetricKey, timeStamp, errors.New("timestamp error, timeout")
 	}
 
 	return symmetricKey, timeStamp, nil
