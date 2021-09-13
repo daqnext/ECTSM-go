@@ -53,15 +53,12 @@ func StartHttpServer() {
 }
 
 func handlerEctminfo(c echo.Context) error {
-	type publicKeyResponse struct {
+
+	r := struct {
 		UnixTime  int64
 		PublicKey string
-	}
-	r := &publicKeyResponse{
-		UnixTime:  time.Now().Unix(),
-		PublicKey: publicKeyBase64Str,
-	}
-	c.JSON(200, r)
+	}{time.Now().Unix(), publicKeyBase64Str}
+	c.JSON(200, &r)
 	return nil
 }
 
@@ -78,18 +75,13 @@ func handlerGetTest(c echo.Context) error {
 	log.Println(timeStamp)
 
 	//responseData example
-	type responseData struct {
+	data := struct {
 		Status int
 		Msg    string
 		Data   interface{}
-	}
-	data := &responseData{
-		Status: 0,
-		Msg:    "post success",
-		Data:   nil,
-	}
+	}{0, "post success", nil}
 
-	sendData, err := ecthttp.ECTResponse(c.Response().Header(), data, symmetricKey)
+	sendData, err := ecthttp.ECTResponse(c.Response().Header(), &data, symmetricKey)
 	if err != nil {
 		c.String(500, err.Error())
 		return nil
@@ -111,18 +103,14 @@ func handlerPostTest(c echo.Context) error {
 	log.Println(string(decryptedBody))
 
 	//responseData example
-	type responseData struct {
+
+	data := struct {
 		Status int
 		Msg    string
 		Data   interface{}
-	}
-	data := &responseData{
-		Status: 0,
-		Msg:    "post success",
-		Data:   nil,
-	}
+	}{0, "post success", nil}
 
-	sendData, err := ecthttp.ECTResponse(c.Response().Header(), data, symmetricKey)
+	sendData, err := ecthttp.ECTResponse(c.Response().Header(), &data, symmetricKey)
 	if err != nil {
 		c.String(500, err.Error())
 		return nil
