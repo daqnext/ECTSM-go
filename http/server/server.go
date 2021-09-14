@@ -53,17 +53,12 @@ func (hs *EctHttpServer) HandlePost(header http.Header, body io.ReadCloser) (sym
 
 func (hs *EctHttpServer) CheckHeader(header http.Header) (symmetricKey []byte, timeStamp int64, e error) {
 	//ecs
-	ecs, exist := header["ecs"]
+	ecs, exist := header["Ecs"]
 	if !exist {
-		ecs, exist = header["Ecs"]
-		if !exist {
-			e = errors.New("ecs not exist")
-			return nil, 0, e
-		}
+		return nil, 0, errors.New("ecs not exist")
 	}
 	if len(ecs) < 1 || ecs[0] == "" {
-		e = errors.New("ecs error")
-		return nil, 0, e
+		return nil, 0, errors.New("ecs error")
 	}
 	//try to get from cache
 	ecsBase64Str := ecs[0]
@@ -75,8 +70,7 @@ func (hs *EctHttpServer) CheckHeader(header http.Header) (symmetricKey []byte, t
 		}
 		symmetricKey, err = utils.ECCDecrypt(hs.PrivateKey, ct)
 		if err != nil {
-			e = errors.New("ecs decrypt error")
-			return nil, 0, e
+			return nil, 0, errors.New("ecs decrypt error")
 		}
 		hs.Cache.Set(ecsBase64Str, symmetricKey, 3600)
 	} else {
@@ -87,8 +81,7 @@ func (hs *EctHttpServer) CheckHeader(header http.Header) (symmetricKey []byte, t
 	if err != nil {
 		return symmetricKey, 0, e
 	}
-	nowTime := time.Now().Unix()
-	gap := nowTime - timeStamp
+	gap := time.Now().Unix() - timeStamp
 	if gap < -ecthttp.AllowRequestTimeGapSec || gap > ecthttp.AllowRequestTimeGapSec {
 		return symmetricKey, timeStamp, errors.New("timestamp error, timeout")
 	}

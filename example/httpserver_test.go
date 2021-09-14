@@ -64,15 +64,14 @@ func handlerEctminfo(c echo.Context) error {
 		UnixTime  int64
 		PublicKey string
 	}{time.Now().Unix(), publicKeyBase64Str}
-	c.JSON(200, &r)
-	return nil
+	return c.JSON(200, &r)
 }
 
 func handlerGetTest(c echo.Context) error {
 	//check header
 	symmetricKey, timeStamp, err := hs.CheckHeader(c.Request().Header)
 	if err != nil {
-		c.String(500, "decrypt header error")
+		return c.String(500, "decrypt header error")
 	}
 
 	//do something
@@ -89,18 +88,16 @@ func handlerGetTest(c echo.Context) error {
 
 	sendData, err := ecthttp.ECTResponse(c.Response().Header(), &data, symmetricKey)
 	if err != nil {
-		c.String(500, err.Error())
-		return nil
+		return c.String(500, err.Error())
 	}
-	c.String(200, sendData)
-	return nil
+	return c.String(200, sendData)
 }
 
 func handlerPostTest(c echo.Context) error {
 
 	symmetricKey, timeStamp, decryptedBody, err := hs.HandlePost(c.Request().Header, c.Request().Body)
 	if err != nil {
-		c.String(500, "decrypt header error:")
+		return c.String(500, "decrypt header error:")
 	}
 
 	//print result
@@ -109,7 +106,6 @@ func handlerPostTest(c echo.Context) error {
 	log.Println("decryptedBody", string(decryptedBody))
 
 	//responseData example
-
 	data := struct {
 		Status int
 		Msg    string
@@ -118,9 +114,7 @@ func handlerPostTest(c echo.Context) error {
 
 	sendData, err := ecthttp.ECTResponse(c.Response().Header(), &data, symmetricKey)
 	if err != nil {
-		c.String(500, err.Error())
-		return nil
+		return c.String(500, err.Error())
 	}
-	c.String(200, sendData)
-	return nil
+	return c.String(200, sendData)
 }

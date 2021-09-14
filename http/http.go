@@ -66,33 +66,25 @@ func setECTTimestamp(header http.Header, symmetricKey []byte) error {
 
 func DecryptTimestamp(header http.Header, symmetricKey []byte) (timeStamp int64, e error) {
 	//timeStamp
-	timeS, exist := header["ecttimestamp"]
+	timeS, exist := header["Ecttimestamp"]
 	if !exist {
-		timeS, exist = header["Ecttimestamp"]
-		if !exist {
-			e = errors.New("timestamp not exist")
-			return 0, e
-		}
+		return 0, errors.New("timestamp not exist")
 	}
 	if len(timeS) < 1 || timeS[0] == "" {
-		e = errors.New("timestamp error")
-		return 0, e
+		return 0, errors.New("timestamp error")
 	}
 	timeStampBase64Str := timeS[0]
 	timeByte, err := base64.StdEncoding.DecodeString(timeStampBase64Str)
 	if err != nil {
-		e = errors.New("timestamp error")
-		return 0, e
+		return 0, errors.New("timestamp error")
 	}
 	timeB, err := utils.AESDecrypt(timeByte, symmetricKey)
 	if err != nil {
-		e = errors.New("decrypt timestamp error")
-		return 0, e
+		return 0, errors.New("decrypt timestamp error")
 	}
 	timeStamp, err = strconv.ParseInt(string(timeB), 10, 64)
 	if err != nil {
-		e = errors.New("decrypt timestamp ParseInt error")
-		return 0, e
+		return 0, errors.New("decrypt timestamp ParseInt error")
 	}
 	return timeStamp, nil
 }
@@ -112,7 +104,6 @@ func DecryptBody(body io.ReadCloser, randKey []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	//str:=base64.StdEncoding.EncodeToString(bufDecrypted)
 	return bufDecrypted, nil
 }
 
@@ -121,7 +112,6 @@ func EncryptBody(data interface{}, randKey []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	sendData, err := utils.AESEncrypt(dataByte, randKey)
 	if err != nil {
 		return nil, err
