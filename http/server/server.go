@@ -55,8 +55,11 @@ func (hs *EctHttpServer) CheckHeader(header http.Header) (symmetricKey []byte, t
 	//ecs
 	ecs, exist := header["ecs"]
 	if !exist {
-		e = errors.New("ecs not exist")
-		return nil, 0, e
+		ecs, exist = header["Ecs"]
+		if !exist {
+			e = errors.New("ecs not exist")
+			return nil, 0, e
+		}
 	}
 	if len(ecs) < 1 || ecs[0] == "" {
 		e = errors.New("ecs error")

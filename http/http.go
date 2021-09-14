@@ -67,8 +67,11 @@ func DecryptTimestamp(header http.Header, symmetricKey []byte) (timeStamp int64,
 	//timeStamp
 	timeS, exist := header["ecttimestamp"]
 	if !exist {
-		e = errors.New("timestamp not exist")
-		return 0, e
+		timeS, exist = header["Ecttimestamp"]
+		if !exist {
+			e = errors.New("timestamp not exist")
+			return 0, e
+		}
 	}
 	if len(timeS) < 1 || timeS[0] == "" {
 		e = errors.New("timestamp error")
