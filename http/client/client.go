@@ -81,7 +81,7 @@ func (hc *EctHttpClient) ECTGetWithToken(url string, userToken string, v ...inte
 
 func (hc *EctHttpClient) ECTGetWithConfig(url string, config *RequestConfig, v ...interface{}) (reqResp *req.Resp, decryptBody []byte, err error) {
 	//header
-	header, err := ecthttp.GenECTHeader(config.Token, hc.EcsKey, hc.SymmetricKey)
+	header, err := ecthttp.GenECTHeader(hc.EcsKey, hc.SymmetricKey, config.Token)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -128,7 +128,7 @@ func (hc *EctHttpClient) ECTPostWithToken(url string, userToken string, obj inte
 
 func (hc *EctHttpClient) ECTPostWithConfig(url string, config *RequestConfig, obj interface{}, v ...interface{}) (reqResp *req.Resp, decryptBody []byte, err error) {
 	//header
-	header, err := ecthttp.GenECTHeader(config.Token, hc.EcsKey, hc.SymmetricKey)
+	header, err := ecthttp.GenECTHeader(hc.EcsKey, hc.SymmetricKey, config.Token)
 	if err != nil {
 		return nil, nil, err
 	}

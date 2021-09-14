@@ -16,20 +16,21 @@ import (
 const AllowRequestTimeGapSec = 180
 const AllowServerClientTimeGap = 30
 
-func GenECTHeader(token string, ecsKey string, symmetricKey []byte) (http.Header, error) {
+func GenECTHeader(ecsKey string, symmetricKey []byte, token string) (http.Header, error) {
 	header := make(http.Header)
-	if token != "" {
-		header.Set("Authorization", token)
+
+	if ecsKey == "" || symmetricKey == nil {
+		return nil, errors.New("ecsKey && symmetricKey are both required ")
 	}
 
-	if ecsKey != "" {
-		header.Set("ecs", ecsKey)
-	}
-
-	//time stamp
+	header.Set("ecs", ecsKey)
 	err := setECTTimestamp(header, symmetricKey)
 	if err != nil {
-		return header, err
+		return nil, err
+	}
+
+	if token != "" {
+		header.Set("Authorization", token)
 	}
 
 	return header, nil

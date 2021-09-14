@@ -41,7 +41,11 @@ func StartHttpServer() {
 
 	//cors for html use
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		ExposeHeaders: []string{"ecttimestamp", "ecs", "Ecttimestamp", "Ecs"},
+		ExposeHeaders: []string{
+			"ecttimestamp", "ecs",
+			"Ecttimestamp", "Ecs",
+			"Authorization", "authorization",
+		},
 	}))
 	// add middleware and routes
 	// ...
