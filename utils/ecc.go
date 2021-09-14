@@ -6,7 +6,6 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
-	"log"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/math"
@@ -59,7 +58,6 @@ func StrBase64ToPublicKey(pub string) (*ecdsa.PublicKey, error) {
 	if err != nil {
 		return nil, errors.New("wrong input")
 	}
-
 	x, y := elliptic.Unmarshal(crypto.S256(), pubkeyrawstr)
 	return &ecdsa.PublicKey{Curve: crypto.S256(), X: x, Y: y}, nil
 }
@@ -89,9 +87,5 @@ func GenAndPrintEccKeyPair() (privateKeyBase64Str string, publicKeyBase64Str str
 	privateKeyBase64Str = PrivateKeyToString(privateKey)
 	publicKey := &privateKey.PublicKey
 	publicKeyBase64Str = PublicKeyToString(publicKey)
-
-	log.Println("private key base64:", privateKeyBase64Str)
-	log.Println("public key base64:", publicKeyBase64Str)
-
 	return privateKeyBase64Str, publicKeyBase64Str, nil
 }
