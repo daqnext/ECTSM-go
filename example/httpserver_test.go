@@ -10,6 +10,7 @@ import (
 	"github.com/daqnext/ECTSM-go/http/server"
 	"github.com/daqnext/ECTSM-go/utils"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 var privateKeyBase64Str = "bhbb4EC96zx2uUsWDtSYivzaZUzdeDKMfn+dSV9VwUI="
@@ -37,6 +38,11 @@ func StartHttpServer() {
 	}
 
 	e := echo.New()
+
+	//cors for html use
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		ExposeHeaders: []string{"ecttimestamp", "ecs", "Ecttimestamp", "Ecs"},
+	}))
 	// add middleware and routes
 	// ...
 	e.GET("/ectminfo", handlerEctminfo)
@@ -71,8 +77,8 @@ func handlerGetTest(c echo.Context) error {
 
 	//do something
 	//...
-	log.Println(string(symmetricKey))
-	log.Println(timeStamp)
+	log.Println("symmetricKey", string(symmetricKey))
+	log.Println("timeStamp", timeStamp)
 
 	//responseData example
 	data := struct {
@@ -86,7 +92,7 @@ func handlerGetTest(c echo.Context) error {
 		c.String(500, err.Error())
 		return nil
 	}
-	c.JSONBlob(200, sendData)
+	c.String(200, sendData)
 	return nil
 }
 
@@ -98,9 +104,9 @@ func handlerPostTest(c echo.Context) error {
 	}
 
 	//print result
-	log.Println(string(symmetricKey))
-	log.Println(timeStamp)
-	log.Println(string(decryptedBody))
+	log.Println("symmetricKey", string(symmetricKey))
+	log.Println("timeStamp", timeStamp)
+	log.Println("decryptedBody", string(decryptedBody))
 
 	//responseData example
 
@@ -115,6 +121,6 @@ func handlerPostTest(c echo.Context) error {
 		c.String(500, err.Error())
 		return nil
 	}
-	c.JSONBlob(200, sendData)
+	c.String(200, sendData)
 	return nil
 }

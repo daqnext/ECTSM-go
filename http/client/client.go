@@ -143,7 +143,10 @@ func (hc *EctHttpClient) ECTPostWithConfig(url string, config *RequestConfig, ob
 		return nil, nil, err
 	}
 
-	rs, err := r.Post(url, header, bodySend, v)
+	bodySendStr := base64.StdEncoding.EncodeToString(bodySend)
+	rs, err := r.Post(url, header, bodySendStr, req.Header{
+		"Content-Type": "text/plain",
+	}, v)
 	if err != nil {
 		return nil, nil, err
 	}

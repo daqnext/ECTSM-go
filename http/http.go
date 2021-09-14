@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/daqnext/ECTSM-go/utils"
@@ -34,27 +35,27 @@ func GenECTHeader(token string, ecsKey string, symmetricKey []byte) (http.Header
 	return header, nil
 }
 
-func ECTResponse(header http.Header, data interface{}, symmetricKey []byte) ([]byte, error) {
+func ECTResponse(header http.Header, data interface{}, symmetricKey []byte) (string, error) {
 	//set response header timestamp
 	err := setECTTimestamp(header, symmetricKey)
 	if err != nil {
-		return nil, errors.New("encrypt response header error")
+		return "", errors.New("encrypt response header error")
 	}
 
 	if data != nil {
 		//response data encrypt
 		sendData, err := EncryptBody(data, symmetricKey)
 		if err != nil {
-			return nil, errors.New("encrypt response data error")
+			return "", errors.New("encrypt response data error")
 		}
-		return sendData, nil
+		return base64.StdEncoding.EncodeToString(sendData), nil
 	}
-	return nil, nil
+	return "", nil
 }
 
 func setECTTimestamp(header http.Header, symmetricKey []byte) error {
-	nowTime := time.Now().Unix()
-	encrypted, err := utils.AESEncrypt(utils.Int64ToBytes(nowTime), symmetricKey)
+	nowTimeStr := strconv.FormatInt(time.Now().Unix(), 10)
+	encrypted, err := utils.AESEncrypt([]byte(nowTimeStr), symmetricKey)
 	if err != nil {
 		return err
 	}
@@ -88,7 +89,11 @@ func DecryptTimestamp(header http.Header, symmetricKey []byte) (timeStamp int64,
 		e = errors.New("decrypt timestamp error")
 		return 0, e
 	}
-	timeStamp = utils.BytesToInt64(timeB)
+	timeStamp, err = strconv.ParseInt(string(timeB), 10, 64)
+	if err != nil {
+		e = errors.New("decrypt timestamp ParseInt error")
+		return 0, e
+	}
 	return timeStamp, nil
 }
 
@@ -98,8 +103,12 @@ func DecryptBody(body io.ReadCloser, randKey []byte) ([]byte, error) {
 		return nil, err
 	}
 
+	bodyBuf, err := base64.StdEncoding.DecodeString(string(buf))
+	if err != nil {
+		return nil, err
+	}
 	//decrypt
-	bufDecrypted, err := utils.AESDecrypt(buf, randKey)
+	bufDecrypted, err := utils.AESDecrypt(bodyBuf, randKey)
 	if err != nil {
 		return nil, err
 	}
