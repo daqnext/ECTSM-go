@@ -35,7 +35,7 @@ func New(privateKeyBase64Str string) (*EctHttpServer, error) {
 
 func (hs *EctHttpServer) HandlePost(header http.Header, body io.ReadCloser) (symmetricKey []byte, decryptedBody []byte, token []byte, e error) {
 
-	ecs, exist := header["Ecs"]
+	ecs, exist := header["Ectm_key"]
 	if !exist || len(ecs) < 1 || ecs[0] == "" {
 		return nil, nil, nil, errors.New("ecs not exist")
 	}
@@ -79,7 +79,7 @@ func (hs *EctHttpServer) HandlePost(header http.Header, body io.ReadCloser) (sym
 
 func (hs *EctHttpServer) HandleGet(header http.Header) (symmetricKey []byte, token []byte, e error) {
 
-	ecs, exist := header["Ecs"]
+	ecs, exist := header["Ectm_key"]
 	if !exist || len(ecs) < 1 || ecs[0] == "" {
 		return nil, nil, errors.New("ecs not exist")
 	}

@@ -51,7 +51,7 @@ func HttpRequest() {
 			Age   int
 		}{"Jack", "jack@gmail.com", "123456789", 18}
 		dataByte, _ := json.Marshal(&sendData)
-		r, responseData, err := hc.ECTPost("http://127.0.0.1:8080/test/post", dataByte)
+		r, responseData, err := hc.ECTPostWithToken("http://127.0.0.1:8080/test/post", "userToken", dataByte)
 		if err != nil {
 			log.Println(err)
 			return

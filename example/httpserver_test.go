@@ -43,9 +43,9 @@ func StartHttpServer() {
 	//cors for html use
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		ExposeHeaders: []string{
-			"ecttimestamp", "ecs",
-			"Ecttimestamp", "Ecs",
-			"Authorization", "authorization",
+			"Ectm_key", "ectm_key",
+			"Ectm_time", "ectm_time",
+			"Ectm_token", "ectm_token",
 		},
 	}))
 	// add middleware and routes
@@ -80,7 +80,7 @@ func handlerGetTest(c echo.Context) error {
 	}
 
 	log.Println("symmetricKey", string(symmetricKey))
-	log.Println("token", token)
+	log.Println("token", string(token))
 
 	//responseData example
 	data := struct {
@@ -103,14 +103,14 @@ func handlerGetTest(c echo.Context) error {
 
 func handlerPostTest(c echo.Context) error {
 
-	symmetricKey, token, decryptedBody, err := hs.HandlePost(c.Request().Header, c.Request().Body)
+	symmetricKey, decryptedBody, token, err := hs.HandlePost(c.Request().Header, c.Request().Body)
 	if err != nil {
 		return c.String(500, "decrypt header error:")
 	}
 
 	//print result
 	log.Println("symmetricKey", string(symmetricKey))
-	log.Println("token", token)
+	log.Println("token", string(token))
 	log.Println("decryptedBody", string(decryptedBody))
 
 	var requestBodyObj = struct {
