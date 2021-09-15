@@ -38,7 +38,6 @@ func HttpRequest() {
 		}
 		log.Println("status", r.Response().StatusCode)
 		log.Println("get request reponse", string(responseData))
-		log.Println("get token reponse", string(responseData))
 	}
 
 	//post
