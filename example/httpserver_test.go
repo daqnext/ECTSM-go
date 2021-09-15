@@ -90,8 +90,13 @@ func handlerGetTest(c echo.Context) error {
 		Msg    string
 		Data   interface{}
 	}{0, "post success", nil}
+	responseData, err := json.Marshal(&data)
+	if err != nil {
+		log.Println("err", err)
+		return err
+	}
 
-	sendData, err := ecthttp.ECTResponse(c.Response().Header(), &data, symmetricKey)
+	sendData, err := ecthttp.ECTResponse(c.Response().Header(), string(responseData), symmetricKey)
 	if err != nil {
 		return c.String(500, err.Error())
 	}
@@ -125,8 +130,13 @@ func handlerPostTest(c echo.Context) error {
 		Msg    string
 		Data   interface{}
 	}{0, "post success", nil}
+	responseData, err := json.Marshal(&data)
+	if err != nil {
+		log.Println("err", err)
+		return err
+	}
 
-	sendData, err := ecthttp.ECTResponse(c.Response().Header(), &data, symmetricKey)
+	sendData, err := ecthttp.ECTResponse(c.Response().Header(), string(responseData), symmetricKey)
 	if err != nil {
 		return c.String(500, err.Error())
 	}

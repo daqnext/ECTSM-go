@@ -35,24 +35,15 @@ func GenECTHeader(ecsKey string, symmetricKey []byte, token string) (http.Header
 	return header, nil
 }
 
-func ECTResponse(header http.Header, obj interface{}, symmetricKey []byte) (string, error) {
+func ECTResponse(header http.Header, dataString string, symmetricKey []byte) (string, error) {
 	//set response header timestamp
 	err := setECTTimestamp(header, symmetricKey)
 	if err != nil {
 		return "", errors.New("encrypt response header error")
 	}
 
-	if obj == nil {
-		return "", nil
-	}
-
-	dataByte, err := utils.InterfaceToByte(obj)
-	if err != nil {
-		return "", err
-	}
-
 	//response data encrypt
-	sendStrBase64, err := EncryptBody(dataByte, symmetricKey)
+	sendStrBase64, err := EncryptBody([]byte(dataString), symmetricKey)
 	if err != nil {
 		return "", errors.New("encrypt response data error")
 	}
