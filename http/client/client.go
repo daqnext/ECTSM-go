@@ -2,9 +2,10 @@ package client
 
 import (
 	"crypto/ecdsa"
-	"encoding/base64"
 	"errors"
+	"io/ioutil"
 	"math/rand"
+	"net/http"
 	"time"
 
 	ecthttp "github.com/daqnext/ECTSM-go/http"
@@ -15,8 +16,8 @@ import (
 type EctHttpClient struct {
 	PublicKeyUrl string
 	SymmetricKey []byte
+	EcsKey       []byte
 	PublicKeyEc  *ecdsa.PublicKey
-	EcsKey       string
 }
 
 type RequestConfig struct {
@@ -52,7 +53,6 @@ func New(publicKeyUrl string) (*EctHttpClient, error) {
 	if timeGap < -ecthttp.AllowServerClientTimeGap || timeGap > ecthttp.AllowServerClientTimeGap {
 		return nil, errors.New("time error")
 	}
-
 	//pubKey
 	pubKey, err := utils.StrBase64ToPublicKey(responseData.PublicKey)
 	if err != nil {
@@ -61,13 +61,11 @@ func New(publicKeyUrl string) (*EctHttpClient, error) {
 	hc.PublicKeyEc = pubKey
 
 	//randKey
-	hc.SymmetricKey = []byte(utils.GenRandomKey())
-	encrypted, err := utils.ECCEncrypt(hc.PublicKeyEc, hc.SymmetricKey)
+	hc.SymmetricKey = utils.GenSymmetricKey()
+	hc.EcsKey, err = utils.ECCEncrypt(hc.PublicKeyEc, hc.SymmetricKey)
 	if err != nil {
 		return nil, err
 	}
-	hc.EcsKey = base64.StdEncoding.EncodeToString(encrypted)
-
 	return hc, nil
 }
 
@@ -81,7 +79,8 @@ func (hc *EctHttpClient) ECTGetWithToken(url string, userToken string, v ...inte
 
 func (hc *EctHttpClient) ECTGetWithConfig(url string, config *RequestConfig, v ...interface{}) (reqResp *req.Resp, decryptBody []byte, err error) {
 	//header
-	header, err := ecthttp.GenECTHeader(hc.EcsKey, hc.SymmetricKey, config.Token)
+	header := make(http.Header)
+	err = ecthttp.EncryptAndSetECTMHeader(header, hc.EcsKey, hc.SymmetricKey, []byte(config.Token))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -99,66 +98,51 @@ func (hc *EctHttpClient) ECTGetWithConfig(url string, config *RequestConfig, v .
 		return rs, nil, nil
 	}
 
-	//check response timestamp
-	timeStamp, err := ecthttp.DecryptTimestamp(rs.Response().Header, hc.SymmetricKey)
-	if err != nil {
-		return rs, nil, err
-	}
-	nowTime := time.Now().Unix()
-	gap := nowTime - timeStamp
-	if gap < -ecthttp.AllowRequestTimeGapSec || gap > ecthttp.AllowRequestTimeGapSec {
-		return rs, nil, errors.New("timestamp error, timeout")
-	}
-
-	//decrypt response body
-	data, err := ecthttp.DecryptBody(rs.Response().Body, hc.SymmetricKey)
-	if err != nil {
-		return rs, nil, errors.New("decrypt error")
-	}
-	return rs, data, nil
-}
-
-func (hc *EctHttpClient) ECTPost(url string, dataString string, v ...interface{}) (reqResp *req.Resp, decryptBody []byte, err error) {
-	return hc.ECTPostWithConfig(url, &RequestConfig{TimeoutSec: 30, Token: ""}, dataString, v)
-}
-
-func (hc *EctHttpClient) ECTPostWithToken(url string, userToken string, dataString string, v ...interface{}) (reqResp *req.Resp, decryptBodyStr []byte, err error) {
-	return hc.ECTPostWithConfig(url, &RequestConfig{TimeoutSec: 30, Token: userToken}, dataString, v)
-}
-
-func (hc *EctHttpClient) ECTPostWithConfig(url string, config *RequestConfig, dataString string, v ...interface{}) (reqResp *req.Resp, decryptBodyStr []byte, err error) {
-	//header
-	header, err := ecthttp.GenECTHeader(hc.EcsKey, hc.SymmetricKey, config.Token)
+	_, err = ecthttp.DecryptECTMHeader(rs.Response().Header, hc.SymmetricKey)
 	if err != nil {
 		return nil, nil, err
 	}
 
+	//decrypt response body
+	body, err := ioutil.ReadAll(rs.Response().Body)
+	if err != nil {
+		return rs, nil, errors.New("body error")
+	}
+	decryptBody, err = ecthttp.DecryptBody(body, hc.SymmetricKey)
+	if err != nil {
+		return rs, nil, errors.New("body decrypt error")
+	}
+	return rs, decryptBody, nil
+}
+
+func (hc *EctHttpClient) ECTPost(url string, data []byte, v ...interface{}) (reqResp *req.Resp, decryptBody []byte, err error) {
+	return hc.ECTPostWithConfig(url, &RequestConfig{TimeoutSec: 30, Token: ""}, data, v)
+}
+
+func (hc *EctHttpClient) ECTPostWithToken(url string, userToken string, data []byte, v ...interface{}) (reqResp *req.Resp, decryptBodyStr []byte, err error) {
+	return hc.ECTPostWithConfig(url, &RequestConfig{TimeoutSec: 30, Token: userToken}, data, v)
+}
+
+func (hc *EctHttpClient) ECTPostWithConfig(url string, config *RequestConfig, data []byte, v ...interface{}) (reqResp *req.Resp, decryptBodyStr []byte, err error) {
+	//header
+	header := make(http.Header)
+	err = ecthttp.EncryptAndSetECTMHeader(header, hc.EcsKey, hc.SymmetricKey, []byte(config.Token))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	//set request timeout
 	r := req.New()
 	if config != nil && config.TimeoutSec > 0 {
 		r.SetTimeout(time.Duration(config.TimeoutSec) * time.Second)
 	}
 
-	bodySendStrBase64, err := ecthttp.EncryptBody([]byte(dataString), hc.SymmetricKey)
+	EncryptedBody, err := ecthttp.EncryptBody(data, hc.SymmetricKey)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	//var rs *req.Resp
-	//if dataString==nil {
-	//	rs, err=r.Post(url, header, req.Header{
-	//		"Content-Type": "text/plain",
-	//	}, v)
-	//}else{
-	//	bodySendStrBase64,err=ecthttp.EncryptBody(dataString,hc.SymmetricKey)
-	//	if err!=nil {
-	//		return nil,nil,err
-	//	}
-	//	rs, err=r.Post(url, header, bodySendStrBase64, req.Header{
-	//		"Content-Type": "text/plain",
-	//	}, v)
-	//}
-
-	rs, err := r.Post(url, header, bodySendStrBase64, req.Header{
+	rs, err := r.Post(url, header, EncryptedBody, req.Header{
 		"Content-Type": "text/plain",
 	}, v)
 	if err != nil {
@@ -169,21 +153,20 @@ func (hc *EctHttpClient) ECTPostWithConfig(url string, config *RequestConfig, da
 		return rs, nil, nil
 	}
 
-	//check response timestamp
-	timeStamp, err := ecthttp.DecryptTimestamp(rs.Response().Header, hc.SymmetricKey)
+	_, err = ecthttp.DecryptECTMHeader(rs.Response().Header, hc.SymmetricKey)
 	if err != nil {
 		return rs, nil, err
 	}
-	nowTime := time.Now().Unix()
-	gap := nowTime - timeStamp
-	if gap < -ecthttp.AllowRequestTimeGapSec || gap > ecthttp.AllowRequestTimeGapSec {
-		return rs, nil, errors.New("timestamp error, timeout")
-	}
 
 	//decrypt response body
-	decryptData, err := ecthttp.DecryptBody(rs.Response().Body, hc.SymmetricKey)
+	body, err := ioutil.ReadAll(rs.Response().Body)
+	if err != nil {
+		return rs, nil, errors.New("body error")
+	}
+
+	decryptBody, err := ecthttp.DecryptBody(body, hc.SymmetricKey)
 	if err != nil {
 		return rs, nil, errors.New("decrypt error")
 	}
-	return rs, decryptData, nil
+	return rs, decryptBody, nil
 }

@@ -38,6 +38,7 @@ func HttpRequest() {
 		}
 		log.Println("status", r.Response().StatusCode)
 		log.Println("get request reponse", string(responseData))
+		log.Println("get token reponse", string(responseData))
 	}
 
 	//post
@@ -49,14 +50,8 @@ func HttpRequest() {
 			Phone string
 			Age   int
 		}{"Jack", "jack@gmail.com", "123456789", 18}
-		dataByte, err := json.Marshal(&sendData)
-		if err != nil {
-			log.Println("err", err)
-			return
-		}
-
-		url := "http://127.0.0.1:8080/test/post"
-		r, responseData, err := hc.ECTPost(url, string(dataByte))
+		dataByte, _ := json.Marshal(&sendData)
+		r, responseData, err := hc.ECTPost("http://127.0.0.1:8080/test/post", dataByte)
 		if err != nil {
 			log.Println(err)
 			return

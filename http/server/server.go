@@ -5,8 +5,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"io"
+	"io/ioutil"
 	"net/http"
-	"time"
 
 	ecthttp "github.com/daqnext/ECTSM-go/http"
 	"github.com/daqnext/ECTSM-go/utils"
@@ -33,58 +33,80 @@ func New(privateKeyBase64Str string) (*EctHttpServer, error) {
 	return hs, nil
 }
 
-func (hs *EctHttpServer) HandlePost(header http.Header, body io.ReadCloser) (symmetricKey []byte, timeStamp int64, decryptedBody []byte, e error) {
+func (hs *EctHttpServer) HandlePost(header http.Header, body io.ReadCloser) (symmetricKey []byte, decryptedBody []byte, token []byte, e error) {
 
-	//check header
-	symmetricKey, timeStamp, err := hs.CheckHeader(header)
-	if err != nil {
-		return nil, 0, nil, err
-	}
-
-	//decrypt body
-	decryptedBody, err = ecthttp.DecryptBody(body, symmetricKey)
-	if err != nil {
-		return nil, 0, nil, err
-	}
-
-	return symmetricKey, timeStamp, decryptedBody, nil
-
-}
-
-func (hs *EctHttpServer) CheckHeader(header http.Header) (symmetricKey []byte, timeStamp int64, e error) {
-	//ecs
 	ecs, exist := header["Ecs"]
-	if !exist {
-		return nil, 0, errors.New("ecs not exist")
+	if !exist || len(ecs) < 1 || ecs[0] == "" {
+		return nil, nil, nil, errors.New("ecs not exist")
 	}
-	if len(ecs) < 1 || ecs[0] == "" {
-		return nil, 0, errors.New("ecs error")
-	}
+
 	//try to get from cache
 	ecsBase64Str := ecs[0]
 	ecsByte, _, exist := hs.Cache.Get(ecsBase64Str)
 	if !exist {
 		ct, err := base64.StdEncoding.DecodeString(ecsBase64Str)
 		if err != nil {
-			return nil, 0, err
+			return nil, nil, nil, err
 		}
 		symmetricKey, err = utils.ECCDecrypt(hs.PrivateKey, ct)
 		if err != nil {
-			return nil, 0, errors.New("ecs decrypt error")
+			return nil, nil, nil, errors.New("ecs decrypt error")
 		}
 		hs.Cache.Set(ecsBase64Str, symmetricKey, 3600)
 	} else {
 		symmetricKey = ecsByte.([]byte)
 	}
 
-	timeStamp, err := ecthttp.DecryptTimestamp(header, symmetricKey)
+	//check header
+	token, err := ecthttp.DecryptECTMHeader(header, symmetricKey)
 	if err != nil {
-		return symmetricKey, 0, e
-	}
-	gap := time.Now().Unix() - timeStamp
-	if gap < -ecthttp.AllowRequestTimeGapSec || gap > ecthttp.AllowRequestTimeGapSec {
-		return symmetricKey, timeStamp, errors.New("timestamp error, timeout")
+		return nil, nil, nil, err
 	}
 
-	return symmetricKey, timeStamp, nil
+	bodybyte, err := ioutil.ReadAll(body)
+	if err != nil {
+		return nil, nil, token, errors.New("body error")
+	}
+
+	decryptBody, err := ecthttp.DecryptBody(bodybyte, symmetricKey)
+	if err != nil {
+		return nil, nil, token, errors.New("decrypt error")
+	}
+
+	return symmetricKey, decryptBody, token, nil
+
+}
+
+func (hs *EctHttpServer) HandleGet(header http.Header) (symmetricKey []byte, token []byte, e error) {
+
+	ecs, exist := header["Ecs"]
+	if !exist || len(ecs) < 1 || ecs[0] == "" {
+		return nil, nil, errors.New("ecs not exist")
+	}
+
+	//try to get from cache
+	ecsBase64Str := ecs[0]
+	ecsByte, _, exist := hs.Cache.Get(ecsBase64Str)
+	if !exist {
+		ct, err := base64.StdEncoding.DecodeString(ecsBase64Str)
+		if err != nil {
+			return nil, nil, err
+		}
+		symmetricKey, err = utils.ECCDecrypt(hs.PrivateKey, ct)
+		if err != nil {
+			return nil, nil, errors.New("ecs decrypt error")
+		}
+		hs.Cache.Set(ecsBase64Str, symmetricKey, 3600)
+	} else {
+		symmetricKey = ecsByte.([]byte)
+	}
+
+	//check header
+	token, err := ecthttp.DecryptECTMHeader(header, symmetricKey)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return symmetricKey, token, nil
+
 }

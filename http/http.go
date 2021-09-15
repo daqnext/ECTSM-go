@@ -3,8 +3,6 @@ package http
 import (
 	"encoding/base64"
 	"errors"
-	"io"
-	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
@@ -15,103 +13,102 @@ import (
 const AllowRequestTimeGapSec = 180
 const AllowServerClientTimeGap = 30
 
-func GenECTHeader(ecsKey string, symmetricKey []byte, token string) (http.Header, error) {
-	header := make(http.Header)
-
-	if ecsKey == "" || symmetricKey == nil {
-		return nil, errors.New("ecsKey && symmetricKey are both required ")
+func EncryptAndSetECTMHeader(header http.Header, EcsKey []byte, symmetricKey []byte, token []byte) error {
+	//set the ecs key only for request to server
+	if len(EcsKey) != 0 {
+		header.Set("ectm_key", base64.StdEncoding.EncodeToString(EcsKey))
 	}
-
-	header.Set("ecs", ecsKey)
-	err := setECTTimestamp(header, symmetricKey)
-	if err != nil {
-		return nil, err
-	}
-
-	if token != "" {
-		header.Set("Authorization", token)
-	}
-
-	return header, nil
-}
-
-func ECTResponse(header http.Header, dataString string, symmetricKey []byte) (string, error) {
-	//set response header timestamp
-	err := setECTTimestamp(header, symmetricKey)
-	if err != nil {
-		return "", errors.New("encrypt response header error")
-	}
-
-	//response data encrypt
-	sendStrBase64, err := EncryptBody([]byte(dataString), symmetricKey)
-	if err != nil {
-		return "", errors.New("encrypt response data error")
-	}
-	return sendStrBase64, nil
-
-}
-
-func setECTTimestamp(header http.Header, symmetricKey []byte) error {
+	//set the time
 	nowTimeStr := strconv.FormatInt(time.Now().Unix(), 10)
-	encrypted, err := utils.AESEncrypt([]byte(nowTimeStr), symmetricKey)
+	encrypted_time_byte, err := utils.AESEncrypt([]byte(nowTimeStr), symmetricKey)
 	if err != nil {
 		return err
 	}
-	timeStamp := base64.StdEncoding.EncodeToString(encrypted)
-	header.Set("ecttimestamp", timeStamp)
+	header.Set("ectm_time", base64.StdEncoding.EncodeToString(encrypted_time_byte))
+	//set token
+	if len(token) != 0 {
+		encrypted_token_byte, err := utils.AESEncrypt(token, symmetricKey)
+		if err != nil {
+			return err
+		}
+		header.Set("ectm_token", base64.StdEncoding.EncodeToString(encrypted_token_byte))
+	}
 	return nil
 }
 
-func DecryptTimestamp(header http.Header, symmetricKey []byte) (timeStamp int64, e error) {
-	//timeStamp
-	timeS, exist := header["Ecttimestamp"]
-	if !exist {
-		return 0, errors.New("timestamp not exist")
+//can be called from both server side and client side
+func DecryptECTMHeader(header http.Header, symmetricKey []byte) (token []byte, e error) {
+
+	/////check time //////////
+	timeS, exist := header["Ectm_time"]
+	if !exist || len(timeS) < 1 || timeS[0] == "" {
+		return nil, errors.New("timestamp not exist")
 	}
-	if len(timeS) < 1 || timeS[0] == "" {
-		return 0, errors.New("timestamp error")
-	}
-	timeStampBase64Str := timeS[0]
-	timeByte, err := base64.StdEncoding.DecodeString(timeStampBase64Str)
+
+	timeByte, err := base64.StdEncoding.DecodeString(timeS[0])
 	if err != nil {
-		return 0, errors.New("timestamp error")
+		return nil, errors.New("timestamp base64 format error")
 	}
-	timeB, err := utils.AESDecrypt(timeByte, symmetricKey)
+
+	timeDecrypted, err := utils.AESDecrypt(timeByte, symmetricKey)
 	if err != nil {
-		return 0, errors.New("decrypt timestamp error")
+		return nil, errors.New("decrypt timestamp error")
 	}
-	timeStamp, err = strconv.ParseInt(string(timeB), 10, 64)
+	timeStamp, err := strconv.ParseInt(string(timeDecrypted), 10, 64)
 	if err != nil {
-		return 0, errors.New("decrypt timestamp ParseInt error")
+		return nil, errors.New("timestamp ParseInt error")
 	}
-	return timeStamp, nil
+	timeGap := time.Now().Unix() - timeStamp
+	if timeGap < -AllowServerClientTimeGap || timeGap > AllowServerClientTimeGap {
+		return nil, errors.New("time Gap error")
+	}
+
+	///check token [optional]
+	tokenS, exist := header["Ectm_token"]
+	if exist && len(tokenS) > 0 && tokenS[0] != "" {
+		tokenByte, err := base64.StdEncoding.DecodeString(tokenS[0])
+		if err != nil {
+			return nil, errors.New("token base64 format error")
+		}
+		tokenDecrypted, err := utils.AESDecrypt(tokenByte, symmetricKey)
+		if err != nil {
+			return nil, errors.New("decrypt token error")
+		}
+		return tokenDecrypted, nil
+	}
+
+	return nil, nil
 }
 
-func DecryptBody(body io.ReadCloser, randKey []byte) ([]byte, error) {
-	buf, err := ioutil.ReadAll(body)
+func EncryptBody(dataByte []byte, randKey []byte) (EncryptedBody []byte, err error) {
+	encryptedByte, err := utils.AESEncrypt(dataByte, randKey)
 	if err != nil {
 		return nil, err
 	}
-	if len(buf) == 0 {
+	return encryptedByte, nil
+}
+
+func DecryptBody(body []byte, randKey []byte) ([]byte, error) {
+	if len(body) == 0 {
 		return nil, nil
 	}
-
-	bodyBuf, err := base64.StdEncoding.DecodeString(string(buf))
-	if err != nil {
-		return nil, err
-	}
-	//decrypt
-	bufDecrypted, err := utils.AESDecrypt(bodyBuf, randKey)
+	bufDecrypted, err := utils.AESDecrypt(body, randKey)
 	if err != nil {
 		return nil, err
 	}
 	return bufDecrypted, nil
 }
 
-func EncryptBody(dataByte []byte, randKey []byte) (sendStrBase64 string, err error) {
-	encryptByte, err := utils.AESEncrypt(dataByte, randKey)
+func ECTResponse(header http.Header, symmetricKey []byte, data []byte) ([]byte, error) {
+
+	err := EncryptAndSetECTMHeader(header, nil, symmetricKey, nil)
 	if err != nil {
-		return "", err
+		return nil, errors.New("encrypt response header error")
 	}
-	return base64.StdEncoding.EncodeToString(encryptByte), nil
+	//body encrypt
+	encryptedBody, err := EncryptBody(data, symmetricKey)
+	if err != nil {
+		return nil, errors.New("encrypt response data error")
+	}
+	return encryptedBody, nil
 }
