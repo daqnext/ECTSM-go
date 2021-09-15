@@ -59,7 +59,7 @@ func DecryptECTMHeader(header http.Header, symmetricKey []byte) (token []byte, e
 		return nil, errors.New("timestamp ParseInt error")
 	}
 	timeGap := time.Now().Unix() - timeStamp
-	if timeGap < -AllowServerClientTimeGap || timeGap > AllowServerClientTimeGap {
+	if timeGap < -AllowRequestTimeGapSec || timeGap > AllowRequestTimeGapSec {
 		return nil, errors.New("time Gap error")
 	}
 
