@@ -68,7 +68,11 @@ func (hs *EctHttpServer) HandlePost(header http.Header, body io.ReadCloser) (sym
 		return nil, nil, token, errors.New("body error")
 	}
 
-	decryptBody, err := ecthttp.DecryptBody(bodybyte, symmetricKey)
+	bodybyteFromBase64, err := base64.StdEncoding.DecodeString(string(bodybyte))
+	if err != nil {
+		return nil, nil, token, errors.New("bodyBase64 to byte error")
+	}
+	decryptBody, err := ecthttp.DecryptBody(bodybyteFromBase64, symmetricKey)
 	if err != nil {
 		return nil, nil, token, errors.New("decrypt error")
 	}

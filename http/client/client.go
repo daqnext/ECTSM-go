@@ -2,6 +2,7 @@ package client
 
 import (
 	"crypto/ecdsa"
+	"encoding/base64"
 	"errors"
 	"io/ioutil"
 	"math/rand"
@@ -108,7 +109,13 @@ func (hc *EctHttpClient) ECTGetWithConfig(url string, config *RequestConfig, v .
 	if err != nil {
 		return rs, nil, errors.New("body error")
 	}
-	decryptBody, err = ecthttp.DecryptBody(body, hc.SymmetricKey)
+
+	bodybyteFromBase64, err := base64.StdEncoding.DecodeString(string(body))
+	if err != nil {
+		return rs, nil, errors.New("bodyBase64 to byte error")
+	}
+
+	decryptBody, err = ecthttp.DecryptBody(bodybyteFromBase64, hc.SymmetricKey)
 	if err != nil {
 		return rs, nil, errors.New("body decrypt error")
 	}
@@ -142,7 +149,7 @@ func (hc *EctHttpClient) ECTPostWithConfig(url string, config *RequestConfig, da
 		return nil, nil, err
 	}
 
-	rs, err := r.Post(url, header, EncryptedBody, req.Header{
+	rs, err := r.Post(url, header, base64.StdEncoding.EncodeToString(EncryptedBody), req.Header{
 		"Content-Type": "text/plain",
 	}, v)
 	if err != nil {
@@ -164,7 +171,12 @@ func (hc *EctHttpClient) ECTPostWithConfig(url string, config *RequestConfig, da
 		return rs, nil, errors.New("body error")
 	}
 
-	decryptBody, err := ecthttp.DecryptBody(body, hc.SymmetricKey)
+	bodybyteFromBase64, err := base64.StdEncoding.DecodeString(string(body))
+	if err != nil {
+		return rs, nil, errors.New("bodyBase64 to byte error")
+	}
+
+	decryptBody, err := ecthttp.DecryptBody(bodybyteFromBase64, hc.SymmetricKey)
 	if err != nil {
 		return rs, nil, errors.New("decrypt error")
 	}

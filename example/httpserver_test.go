@@ -98,7 +98,7 @@ func handlerGetTest(c echo.Context) error {
 	if err != nil {
 		return c.String(500, err.Error())
 	}
-	return c.String(200, string(sendData))
+	return c.String(200, sendData)
 }
 
 func handlerPostTest(c echo.Context) error {
@@ -134,9 +134,9 @@ func handlerPostTest(c echo.Context) error {
 		return err
 	}
 
-	sendData, err := ecthttp.ECTResponse(c.Response().Header(), symmetricKey, responseData)
+	sendDataBase64, err := ecthttp.ECTResponse(c.Response().Header(), symmetricKey, responseData)
 	if err != nil {
 		return c.String(500, err.Error())
 	}
-	return c.String(200, string(sendData))
+	return c.String(200, sendDataBase64)
 }
