@@ -1,11 +1,17 @@
 package example
 
 import (
+	"encoding/json"
 	"log"
 	"testing"
 
 	"github.com/daqnext/ECTSM-go/http/client"
 )
+
+func Test_json(t *testing.T) {
+	result, _ := json.Marshal(1.5)
+	log.Println(string(result))
+}
 
 func Test_request(t *testing.T) {
 	HttpRequest()
@@ -30,8 +36,6 @@ func HttpRequest() {
 			log.Println(err)
 			return
 		}
-		header := r.Response().Header
-		log.Println(header["Aaa"])
 		log.Println("status", r.Response().StatusCode)
 		log.Println("get request reponse", string(responseData))
 	}
@@ -45,9 +49,14 @@ func HttpRequest() {
 			Phone string
 			Age   int
 		}{"Jack", "jack@gmail.com", "123456789", 18}
+		dataByte, err := json.Marshal(&sendData)
+		if err != nil {
+			log.Println("err", err)
+			return
+		}
 
 		url := "http://127.0.0.1:8080/test/post"
-		r, responseData, err := hc.ECTPost(url, &sendData)
+		r, responseData, err := hc.ECTPost(url, string(dataByte))
 		if err != nil {
 			log.Println(err)
 			return

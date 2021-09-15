@@ -2,7 +2,6 @@ package http
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -36,22 +35,29 @@ func GenECTHeader(ecsKey string, symmetricKey []byte, token string) (http.Header
 	return header, nil
 }
 
-func ECTResponse(header http.Header, data interface{}, symmetricKey []byte) (string, error) {
+func ECTResponse(header http.Header, obj interface{}, symmetricKey []byte) (string, error) {
 	//set response header timestamp
 	err := setECTTimestamp(header, symmetricKey)
 	if err != nil {
 		return "", errors.New("encrypt response header error")
 	}
 
-	if data != nil {
-		//response data encrypt
-		sendData, err := EncryptBody(data, symmetricKey)
-		if err != nil {
-			return "", errors.New("encrypt response data error")
-		}
-		return base64.StdEncoding.EncodeToString(sendData), nil
+	if obj == nil {
+		return "", nil
 	}
-	return "", nil
+
+	dataByte, err := utils.InterfaceToByte(obj)
+	if err != nil {
+		return "", err
+	}
+
+	//response data encrypt
+	sendStrBase64, err := EncryptBody(dataByte, symmetricKey)
+	if err != nil {
+		return "", errors.New("encrypt response data error")
+	}
+	return sendStrBase64, nil
+
 }
 
 func setECTTimestamp(header http.Header, symmetricKey []byte) error {
@@ -95,6 +101,9 @@ func DecryptBody(body io.ReadCloser, randKey []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(buf) == 0 {
+		return nil, nil
+	}
 
 	bodyBuf, err := base64.StdEncoding.DecodeString(string(buf))
 	if err != nil {
@@ -108,14 +117,10 @@ func DecryptBody(body io.ReadCloser, randKey []byte) ([]byte, error) {
 	return bufDecrypted, nil
 }
 
-func EncryptBody(data interface{}, randKey []byte) ([]byte, error) {
-	dataByte, err := json.Marshal(data)
+func EncryptBody(dataByte []byte, randKey []byte) (sendStrBase64 string, err error) {
+	encryptByte, err := utils.AESEncrypt(dataByte, randKey)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	sendData, err := utils.AESEncrypt(dataByte, randKey)
-	if err != nil {
-		return nil, err
-	}
-	return sendData, nil
+	return base64.StdEncoding.EncodeToString(encryptByte), nil
 }

@@ -118,15 +118,15 @@ func (hc *EctHttpClient) ECTGetWithConfig(url string, config *RequestConfig, v .
 	return rs, data, nil
 }
 
-func (hc *EctHttpClient) ECTPost(url string, obj interface{}, v ...interface{}) (reqResp *req.Resp, decryptBody []byte, err error) {
-	return hc.ECTPostWithConfig(url, &RequestConfig{TimeoutSec: 30, Token: ""}, obj, v)
+func (hc *EctHttpClient) ECTPost(url string, dataString string, v ...interface{}) (reqResp *req.Resp, decryptBody []byte, err error) {
+	return hc.ECTPostWithConfig(url, &RequestConfig{TimeoutSec: 30, Token: ""}, dataString, v)
 }
 
-func (hc *EctHttpClient) ECTPostWithToken(url string, userToken string, obj interface{}, v ...interface{}) (reqResp *req.Resp, decryptBody []byte, err error) {
-	return hc.ECTPostWithConfig(url, &RequestConfig{TimeoutSec: 30, Token: userToken}, obj, v)
+func (hc *EctHttpClient) ECTPostWithToken(url string, userToken string, dataString string, v ...interface{}) (reqResp *req.Resp, decryptBodyStr []byte, err error) {
+	return hc.ECTPostWithConfig(url, &RequestConfig{TimeoutSec: 30, Token: userToken}, dataString, v)
 }
 
-func (hc *EctHttpClient) ECTPostWithConfig(url string, config *RequestConfig, obj interface{}, v ...interface{}) (reqResp *req.Resp, decryptBody []byte, err error) {
+func (hc *EctHttpClient) ECTPostWithConfig(url string, config *RequestConfig, dataString string, v ...interface{}) (reqResp *req.Resp, decryptBodyStr []byte, err error) {
 	//header
 	header, err := ecthttp.GenECTHeader(hc.EcsKey, hc.SymmetricKey, config.Token)
 	if err != nil {
@@ -138,13 +138,27 @@ func (hc *EctHttpClient) ECTPostWithConfig(url string, config *RequestConfig, ob
 		r.SetTimeout(time.Duration(config.TimeoutSec) * time.Second)
 	}
 
-	bodySend, err := ecthttp.EncryptBody(obj, hc.SymmetricKey)
+	bodySendStrBase64, err := ecthttp.EncryptBody([]byte(dataString), hc.SymmetricKey)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	bodySendStr := base64.StdEncoding.EncodeToString(bodySend)
-	rs, err := r.Post(url, header, bodySendStr, req.Header{
+	//var rs *req.Resp
+	//if dataString==nil {
+	//	rs, err=r.Post(url, header, req.Header{
+	//		"Content-Type": "text/plain",
+	//	}, v)
+	//}else{
+	//	bodySendStrBase64,err=ecthttp.EncryptBody(dataString,hc.SymmetricKey)
+	//	if err!=nil {
+	//		return nil,nil,err
+	//	}
+	//	rs, err=r.Post(url, header, bodySendStrBase64, req.Header{
+	//		"Content-Type": "text/plain",
+	//	}, v)
+	//}
+
+	rs, err := r.Post(url, header, bodySendStrBase64, req.Header{
 		"Content-Type": "text/plain",
 	}, v)
 	if err != nil {
@@ -167,9 +181,9 @@ func (hc *EctHttpClient) ECTPostWithConfig(url string, config *RequestConfig, ob
 	}
 
 	//decrypt response body
-	data, err := ecthttp.DecryptBody(rs.Response().Body, hc.SymmetricKey)
+	decryptData, err := ecthttp.DecryptBody(rs.Response().Body, hc.SymmetricKey)
 	if err != nil {
 		return rs, nil, errors.New("decrypt error")
 	}
-	return rs, data, nil
+	return rs, decryptData, nil
 }

@@ -1,6 +1,7 @@
 package example
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"testing"
@@ -108,6 +109,15 @@ func handlerPostTest(c echo.Context) error {
 	log.Println("symmetricKey", string(symmetricKey))
 	log.Println("timeStamp", timeStamp)
 	log.Println("decryptedBody", string(decryptedBody))
+
+	var requestBodyObj = struct {
+		Name  string
+		Email string
+		Phone string
+		Age   int
+	}{}
+	json.Unmarshal(decryptedBody, &requestBodyObj)
+	log.Println(requestBodyObj)
 
 	//responseData example
 	data := struct {
