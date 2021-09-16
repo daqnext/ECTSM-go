@@ -98,7 +98,9 @@ func handlerGetTest(c echo.Context) error {
 	if err != nil {
 		return c.String(500, err.Error())
 	}
-	return c.String(200, sendData)
+	return c.Blob(200, "application/octet-stream", sendData)
+	//return c.String(200, sendData)
+
 }
 
 func handlerPostTest(c echo.Context) error {
@@ -134,9 +136,10 @@ func handlerPostTest(c echo.Context) error {
 		return err
 	}
 
-	sendDataBase64, err := ecthttp.ECTResponse(c.Response().Header(), symmetricKey, responseData)
+	sendData, err := ecthttp.ECTResponse(c.Response().Header(), symmetricKey, responseData)
 	if err != nil {
 		return c.String(500, err.Error())
 	}
-	return c.String(200, sendDataBase64)
+	return c.Blob(200, "application/octet-stream", sendData)
+	//return c.String(200, sendDataBase64)
 }

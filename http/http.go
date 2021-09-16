@@ -99,16 +99,16 @@ func DecryptBody(body []byte, randKey []byte) ([]byte, error) {
 	return bufDecrypted, nil
 }
 
-func ECTResponse(header http.Header, symmetricKey []byte, data []byte) (string, error) {
+func ECTResponse(header http.Header, symmetricKey []byte, data []byte) ([]byte, error) {
 
 	err := EncryptAndSetECTMHeader(header, nil, symmetricKey, nil)
 	if err != nil {
-		return "", errors.New("encrypt response header error")
+		return nil, errors.New("encrypt response header error")
 	}
 	//body encrypt
 	encryptedBody, err := EncryptBody(data, symmetricKey)
 	if err != nil {
-		return "", errors.New("encrypt response data error")
+		return nil, errors.New("encrypt response data error")
 	}
-	return base64.StdEncoding.EncodeToString(encryptedBody), nil
+	return encryptedBody, nil
 }
