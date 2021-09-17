@@ -1,13 +1,12 @@
 package example
 
 import (
-	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"testing"
 	"time"
 
-	ecthttp "github.com/daqnext/ECTSM-go/http"
 	"github.com/daqnext/ECTSM-go/http/server"
 	"github.com/daqnext/ECTSM-go/utils"
 	"github.com/labstack/echo/v4"
@@ -74,13 +73,13 @@ func handlerEctminfo(c echo.Context) error {
 
 func handlerGetTest(c echo.Context) error {
 	//check header
-	symmetricKey, token, err := hs.HandleGet(c.Request().Header)
-	if err != nil {
+	ectRq := hs.HandleGet(c.Request())
+	if ectRq.Err != nil {
 		return c.String(500, "decrypt header error")
 	}
 
-	log.Println("symmetricKey", string(symmetricKey))
-	log.Println("token", string(token))
+	log.Println("symmetricKey", ectRq.GetSymmetricKey())
+	log.Println("token", ectRq.GetToken())
 
 	//responseData example
 	data := struct {
@@ -88,41 +87,31 @@ func handlerGetTest(c echo.Context) error {
 		Msg    string
 		Data   interface{}
 	}{0, "post success", nil}
-	responseData, err := json.Marshal(&data)
-	if err != nil {
-		log.Println("err", err)
-		return err
-	}
 
-	sendData, err := ecthttp.ECTResponse(c.Response().Header(), symmetricKey, responseData)
+	sendData, err := server.ECTSendBack(c.Response().Header(), ectRq.SymmetricKey, data)
 	if err != nil {
 		return c.String(500, err.Error())
 	}
 	return c.Blob(200, "application/octet-stream", sendData)
-	//return c.String(200, sendData)
-
 }
 
 func handlerPostTest(c echo.Context) error {
 
-	symmetricKey, decryptedBody, token, err := hs.HandlePost(c.Request().Header, c.Request().Body)
-	if err != nil {
-		return c.String(500, "decrypt header error:")
+	EctRq := hs.HandlePost(c.Request(), c.Request().Body)
+	if EctRq.Err != nil {
+		return c.String(500, "decrypt post error:")
 	}
 
 	//print result
-	log.Println("symmetricKey", string(symmetricKey))
-	log.Println("token", string(token))
-	log.Println("decryptedBody", string(decryptedBody))
+	log.Println("symmetricKey", EctRq.GetSymmetricKey())
+	log.Println("token", EctRq.GetToken())
+	log.Println("decryptedBody", EctRq.ToString())
 
-	var requestBodyObj = struct {
-		Name  string
-		Email string
-		Phone string
-		Age   int
-	}{}
-	json.Unmarshal(decryptedBody, &requestBodyObj)
-	log.Println(requestBodyObj)
+	jResult := EctRq.ToJson()
+	name, err := jResult.GetString("Name")
+	if err != nil {
+		fmt.Println("Name:", name)
+	}
 
 	//responseData example
 	data := struct {
@@ -130,16 +119,10 @@ func handlerPostTest(c echo.Context) error {
 		Msg    string
 		Data   interface{}
 	}{0, "post success", nil}
-	responseData, err := json.Marshal(&data)
-	if err != nil {
-		log.Println("err", err)
-		return err
-	}
 
-	sendData, err := ecthttp.ECTResponse(c.Response().Header(), symmetricKey, responseData)
+	sendData, err := server.ECTSendBack(c.Response().Header(), EctRq.SymmetricKey, data)
 	if err != nil {
 		return c.String(500, err.Error())
 	}
 	return c.Blob(200, "application/octet-stream", sendData)
-	//return c.String(200, sendDataBase64)
 }

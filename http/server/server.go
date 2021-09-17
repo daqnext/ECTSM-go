@@ -3,6 +3,7 @@ package server
 import (
 	"crypto/ecdsa"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"io"
 	"io/ioutil"
@@ -33,24 +34,25 @@ func New(privateKeyBase64Str string) (*EctHttpServer, error) {
 	return hs, nil
 }
 
-func (hs *EctHttpServer) HandlePost(header http.Header, body io.ReadCloser) (symmetricKey []byte, decryptedBody []byte, token []byte, e error) {
+func (hs *EctHttpServer) HandlePost(httpRequest *http.Request, body io.ReadCloser) *ecthttp.ECTRequest { //(symmetricKey []byte, decryptedBody []byte, token []byte, e error)
 
-	ecs, exist := header["Ectm_key"]
+	ecs, exist := httpRequest.Header["Ectm_key"]
 	if !exist || len(ecs) < 1 || ecs[0] == "" {
-		return nil, nil, nil, errors.New("ecs not exist")
+		return &ecthttp.ECTRequest{Rq: httpRequest, Token: nil, SymmetricKey: nil, DecryptedBody: nil, Err: errors.New("ecs not exist")}
 	}
 
+	var symmetricKey []byte
 	//try to get from cache
 	ecsBase64Str := ecs[0]
 	ecsByte, _, exist := hs.Cache.Get(ecsBase64Str)
 	if !exist {
 		ct, err := base64.StdEncoding.DecodeString(ecsBase64Str)
 		if err != nil {
-			return nil, nil, nil, err
+			return &ecthttp.ECTRequest{Rq: httpRequest, Token: nil, SymmetricKey: nil, DecryptedBody: nil, Err: err}
 		}
 		symmetricKey, err = utils.ECCDecrypt(hs.PrivateKey, ct)
 		if err != nil {
-			return nil, nil, nil, errors.New("ecs decrypt error")
+			return &ecthttp.ECTRequest{Rq: httpRequest, Token: nil, SymmetricKey: nil, DecryptedBody: nil, Err: errors.New("ecs decrypt error")}
 		}
 		hs.Cache.Set(ecsBase64Str, symmetricKey, 3600)
 	} else {
@@ -58,47 +60,44 @@ func (hs *EctHttpServer) HandlePost(header http.Header, body io.ReadCloser) (sym
 	}
 
 	//check header
-	token, err := ecthttp.DecryptECTMHeader(header, symmetricKey)
+	token, err := ecthttp.DecryptECTMHeader(httpRequest.Header, symmetricKey)
 	if err != nil {
-		return nil, nil, nil, err
+		return &ecthttp.ECTRequest{Rq: httpRequest, Token: nil, SymmetricKey: symmetricKey, DecryptedBody: nil, Err: err}
 	}
 
 	bodybyte, err := ioutil.ReadAll(body)
 	if err != nil {
-		return nil, nil, token, errors.New("body error")
+		return &ecthttp.ECTRequest{Rq: httpRequest, Token: token, SymmetricKey: symmetricKey, DecryptedBody: nil, Err: errors.New("body error")}
 	}
 
-	//bodybyteFromBase64, err := base64.StdEncoding.DecodeString(string(bodybyte))
-	//if err != nil {
-	//	return nil, nil, token, errors.New("bodyBase64 to byte error")
-	//}
 	decryptBody, err := ecthttp.DecryptBody(bodybyte, symmetricKey)
 	if err != nil {
-		return nil, nil, token, errors.New("decrypt error")
+		return &ecthttp.ECTRequest{Rq: httpRequest, Token: token, SymmetricKey: symmetricKey, DecryptedBody: nil, Err: errors.New("decrypt error")}
 	}
 
-	return symmetricKey, decryptBody, token, nil
+	return &ecthttp.ECTRequest{Rq: httpRequest, Token: token, SymmetricKey: symmetricKey, DecryptedBody: decryptBody, Err: nil}
 
 }
 
-func (hs *EctHttpServer) HandleGet(header http.Header) (symmetricKey []byte, token []byte, e error) {
+func (hs *EctHttpServer) HandleGet(httpRequest *http.Request) *ecthttp.ECTRequest { // (symmetricKey []byte, token []byte, e error) {
 
-	ecs, exist := header["Ectm_key"]
+	ecs, exist := httpRequest.Header["Ectm_key"]
 	if !exist || len(ecs) < 1 || ecs[0] == "" {
-		return nil, nil, errors.New("ecs not exist")
+		return &ecthttp.ECTRequest{Rq: httpRequest, Token: nil, SymmetricKey: nil, DecryptedBody: nil, Err: errors.New("ecs not exist")}
 	}
 
+	var symmetricKey []byte
 	//try to get from cache
 	ecsBase64Str := ecs[0]
 	ecsByte, _, exist := hs.Cache.Get(ecsBase64Str)
 	if !exist {
 		ct, err := base64.StdEncoding.DecodeString(ecsBase64Str)
 		if err != nil {
-			return nil, nil, err
+			return &ecthttp.ECTRequest{Rq: httpRequest, Token: nil, SymmetricKey: nil, DecryptedBody: nil, Err: err}
 		}
 		symmetricKey, err = utils.ECCDecrypt(hs.PrivateKey, ct)
 		if err != nil {
-			return nil, nil, errors.New("ecs decrypt error")
+			return &ecthttp.ECTRequest{Rq: httpRequest, Token: nil, SymmetricKey: nil, DecryptedBody: nil, Err: errors.New("ecs decrypt error")}
 		}
 		hs.Cache.Set(ecsBase64Str, symmetricKey, 3600)
 	} else {
@@ -106,11 +105,45 @@ func (hs *EctHttpServer) HandleGet(header http.Header) (symmetricKey []byte, tok
 	}
 
 	//check header
-	token, err := ecthttp.DecryptECTMHeader(header, symmetricKey)
+	token, err := ecthttp.DecryptECTMHeader(httpRequest.Header, symmetricKey)
 	if err != nil {
-		return nil, nil, err
+		return &ecthttp.ECTRequest{Rq: httpRequest, Token: nil, SymmetricKey: symmetricKey, DecryptedBody: nil, Err: err}
 	}
 
-	return symmetricKey, token, nil
+	return &ecthttp.ECTRequest{Rq: httpRequest, Token: token, SymmetricKey: symmetricKey, DecryptedBody: nil, Err: nil}
 
+}
+
+func ECTSendBack(header http.Header, symmetricKey []byte, data interface{}) ([]byte, error) {
+
+	err := ecthttp.EncryptAndSetECTMHeader(header, nil, symmetricKey, nil)
+	if err != nil {
+		return nil, errors.New("encrypt response header error")
+	}
+
+	//body encrypt
+	var EncryptedBody []byte
+	var toEncrypt []byte
+
+	if data == nil {
+		toEncrypt = nil
+		EncryptedBody = nil
+	} else {
+		switch data.(type) {
+		case string:
+			toEncrypt = data.([]byte)
+		case []byte:
+			toEncrypt = data.([]byte)
+		default:
+			toEncrypt, err = json.Marshal(data)
+			if err != nil {
+				return nil, errors.New("encrypt response data error")
+			}
+		}
+		EncryptedBody, err = ecthttp.EncryptBody(toEncrypt, symmetricKey)
+		if err != nil {
+			return nil, errors.New("encrypt response data error")
+		}
+	}
+	return EncryptedBody, nil
 }

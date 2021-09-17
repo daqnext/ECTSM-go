@@ -8,7 +8,45 @@ import (
 	"time"
 
 	"github.com/daqnext/ECTSM-go/utils"
+	fj "github.com/daqnext/fastjson"
 )
+
+type ECTResponse struct {
+	Rs            *http.Response
+	DecryptedBody []byte
+	Err           error
+}
+
+func (ectR *ECTResponse) ToString() string {
+	return string(ectR.DecryptedBody)
+}
+
+func (ectR *ECTResponse) ToJson() *fj.FastJson {
+	return fj.NewFromBytes(ectR.DecryptedBody)
+}
+
+type ECTRequest struct {
+	Rq            *http.Request
+	Token         []byte
+	SymmetricKey  []byte
+	DecryptedBody []byte
+	Err           error
+}
+
+func (ectRq *ECTRequest) GetToken() string {
+	return string(ectRq.Token)
+}
+func (ectRq *ECTRequest) GetSymmetricKey() string {
+	return string(ectRq.SymmetricKey)
+}
+
+func (ectRq *ECTRequest) ToString() string {
+	return string(ectRq.DecryptedBody)
+}
+
+func (ectRq *ECTRequest) ToJson() *fj.FastJson {
+	return fj.NewFromBytes(ectRq.DecryptedBody)
+}
 
 const AllowRequestTimeGapSec = 180
 const AllowServerClientTimeGap = 30
@@ -97,18 +135,4 @@ func DecryptBody(body []byte, randKey []byte) ([]byte, error) {
 		return nil, err
 	}
 	return bufDecrypted, nil
-}
-
-func ECTResponse(header http.Header, symmetricKey []byte, data []byte) ([]byte, error) {
-
-	err := EncryptAndSetECTMHeader(header, nil, symmetricKey, nil)
-	if err != nil {
-		return nil, errors.New("encrypt response header error")
-	}
-	//body encrypt
-	encryptedBody, err := EncryptBody(data, symmetricKey)
-	if err != nil {
-		return nil, errors.New("encrypt response data error")
-	}
-	return encryptedBody, nil
 }
