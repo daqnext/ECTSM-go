@@ -97,7 +97,7 @@ func handlerGetTest(c echo.Context) error {
 
 func handlerPostTest(c echo.Context) error {
 
-	EctRq := hs.HandlePost(c.Request(), c.Request().Body)
+	EctRq := hs.HandlePost(c.Request())
 	if EctRq.Err != nil {
 		return c.String(500, "decrypt post error:")
 	}

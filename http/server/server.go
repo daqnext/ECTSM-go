@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"io"
 	"io/ioutil"
 	"net/http"
 
@@ -34,7 +33,7 @@ func New(privateKeyBase64Str string) (*EctHttpServer, error) {
 	return hs, nil
 }
 
-func (hs *EctHttpServer) HandlePost(httpRequest *http.Request, body io.ReadCloser) *ecthttp.ECTRequest { //(symmetricKey []byte, decryptedBody []byte, token []byte, e error)
+func (hs *EctHttpServer) HandlePost(httpRequest *http.Request) *ecthttp.ECTRequest { //(symmetricKey []byte, decryptedBody []byte, token []byte, e error)
 
 	ecs, exist := httpRequest.Header["Ectm_key"]
 	if !exist || len(ecs) < 1 || ecs[0] == "" {
@@ -65,7 +64,7 @@ func (hs *EctHttpServer) HandlePost(httpRequest *http.Request, body io.ReadClose
 		return &ecthttp.ECTRequest{Rq: httpRequest, Token: nil, SymmetricKey: symmetricKey, DecryptedBody: nil, Err: err}
 	}
 
-	bodybyte, err := ioutil.ReadAll(body)
+	bodybyte, err := ioutil.ReadAll(httpRequest.Body)
 	if err != nil {
 		return &ecthttp.ECTRequest{Rq: httpRequest, Token: token, SymmetricKey: symmetricKey, DecryptedBody: nil, Err: errors.New("body error")}
 	}
