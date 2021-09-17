@@ -82,13 +82,10 @@ func (hc *EctHttpClient) ECTGet(url string, Token []byte, v ...interface{}) *ect
 	if err != nil {
 		return &ecthttp.ECTResponse{Rs: nil, DecryptedBody: nil, Err: err}
 	}
-	if rs.Response().StatusCode != 200 {
-		return &ecthttp.ECTResponse{Rs: rs.Response(), DecryptedBody: nil, Err: nil}
-	}
 
 	_, err = ecthttp.DecryptECTMHeader(rs.Response().Header, hc.SymmetricKey)
 	if err != nil {
-		return &ecthttp.ECTResponse{Rs: nil, DecryptedBody: nil, Err: err}
+		return &ecthttp.ECTResponse{Rs: rs.Response(), DecryptedBody: nil, Err: err}
 	}
 
 	//decrypt response body
@@ -128,7 +125,7 @@ func (hc *EctHttpClient) ECTPost(url string, Token []byte, data interface{}, v .
 
 		switch data.(type) {
 		case string:
-			toEncrypt = data.([]byte)
+			toEncrypt = []byte(data.(string))
 		case []byte:
 			toEncrypt = data.([]byte)
 		default:
@@ -148,10 +145,6 @@ func (hc *EctHttpClient) ECTPost(url string, Token []byte, data interface{}, v .
 	}, v)
 	if err != nil {
 		return &ecthttp.ECTResponse{Rs: nil, DecryptedBody: nil, Err: err}
-	}
-
-	if rs.Response().StatusCode != 200 {
-		return &ecthttp.ECTResponse{Rs: rs.Response(), DecryptedBody: nil, Err: nil}
 	}
 
 	_, err = ecthttp.DecryptECTMHeader(rs.Response().Header, hc.SymmetricKey)

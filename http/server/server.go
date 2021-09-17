@@ -130,7 +130,7 @@ func ECTSendBack(header http.Header, symmetricKey []byte, data interface{}) ([]b
 	} else {
 		switch data.(type) {
 		case string:
-			toEncrypt = data.([]byte)
+			toEncrypt = []byte(data.(string))
 		case []byte:
 			toEncrypt = data.([]byte)
 		default:
