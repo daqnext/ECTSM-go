@@ -31,7 +31,7 @@ func HttpRequest() {
 		url := "http://127.0.0.1:8080/test/get"
 		result := hc.ECTGet(url, []byte("usertoken"))
 		if result.Err != nil {
-			fmt.Println(err)
+			fmt.Println(result.Err)
 		} else {
 			fmt.Println("result:", result.ToString())
 		}
@@ -47,7 +47,7 @@ func HttpRequest() {
 		}{"Jack", "jack@gmail.com", "123456789", 19}
 		result := hc.ECTPost("http://127.0.0.1:8080/test/post", []byte("userToken"), sendData)
 		if result.Err != nil {
-			fmt.Println(err)
+			fmt.Println(result.Err)
 		} else {
 			fmt.Println("result:", result.ToJson().GetContentAsString())
 		}

@@ -4,6 +4,7 @@ import (
 	"crypto/ecdsa"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -83,17 +84,22 @@ func (hc *EctHttpClient) ECTGet(url string, Token []byte, v ...interface{}) *ect
 		return &ecthttp.ECTResponse{Rs: nil, DecryptedBody: nil, Err: err}
 	}
 
+	body, err := ioutil.ReadAll(rs.Response().Body)
+	if err != nil {
+		return &ecthttp.ECTResponse{Rs: rs.Response(), DecryptedBody: nil, Err: errors.New("body error")}
+	}
+
+	if rs.Response().StatusCode != 200 {
+		errStr := fmt.Sprintf("response status error,status code:%d,content:%s", rs.Response().StatusCode, string(body))
+		return &ecthttp.ECTResponse{Rs: rs.Response(), DecryptedBody: nil, Err: errors.New(errStr)}
+	}
+
 	_, err = ecthttp.DecryptECTMHeader(rs.Response().Header, hc.SymmetricKey)
 	if err != nil {
 		return &ecthttp.ECTResponse{Rs: rs.Response(), DecryptedBody: nil, Err: err}
 	}
 
 	//decrypt response body
-	body, err := ioutil.ReadAll(rs.Response().Body)
-	if err != nil {
-		return &ecthttp.ECTResponse{Rs: rs.Response(), DecryptedBody: nil, Err: errors.New("body error")}
-	}
-
 	decryptBody, err := ecthttp.DecryptBody(body, hc.SymmetricKey)
 	if err != nil {
 		return &ecthttp.ECTResponse{Rs: rs.Response(), DecryptedBody: nil, Err: errors.New("body decrypt error")}
@@ -147,17 +153,22 @@ func (hc *EctHttpClient) ECTPost(url string, Token []byte, data interface{}, v .
 		return &ecthttp.ECTResponse{Rs: nil, DecryptedBody: nil, Err: err}
 	}
 
+	body, err := ioutil.ReadAll(rs.Response().Body)
+	if err != nil {
+		return &ecthttp.ECTResponse{Rs: rs.Response(), DecryptedBody: nil, Err: errors.New("body error")}
+	}
+
+	if rs.Response().StatusCode != 200 {
+		errStr := fmt.Sprintf("response status error,status code:%d,content:%s", rs.Response().StatusCode, string(body))
+		return &ecthttp.ECTResponse{Rs: rs.Response(), DecryptedBody: nil, Err: errors.New(errStr)}
+	}
+
 	_, err = ecthttp.DecryptECTMHeader(rs.Response().Header, hc.SymmetricKey)
 	if err != nil {
 		return &ecthttp.ECTResponse{Rs: rs.Response(), DecryptedBody: nil, Err: err}
 	}
 
 	//decrypt response body
-	body, err := ioutil.ReadAll(rs.Response().Body)
-	if err != nil {
-		return &ecthttp.ECTResponse{Rs: rs.Response(), DecryptedBody: nil, Err: errors.New("body error")}
-	}
-
 	decryptBody, err := ecthttp.DecryptBody(body, hc.SymmetricKey)
 	if err != nil {
 		return &ecthttp.ECTResponse{Rs: rs.Response(), DecryptedBody: nil, Err: errors.New("decrypt error")}

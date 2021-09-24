@@ -71,6 +71,7 @@ func EncryptAndSetECTMHeader(header http.Header, EcsKey []byte, symmetricKey []b
 		}
 		header.Set("ectm_token", base64.StdEncoding.EncodeToString(encrypted_token_byte))
 	}
+	header.Set("Cache-Control", "no-store")
 	return nil
 }
 
