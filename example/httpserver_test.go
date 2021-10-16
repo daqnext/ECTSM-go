@@ -2,7 +2,7 @@ package example
 
 import (
 	"fmt"
-	"log"
+	locallog "github.com/daqnext/LocalLog/log"
 	"net/http"
 	"testing"
 	"time"
@@ -30,9 +30,19 @@ func GenKeyPair() {
 	utils.GenAndPrintEccKeyPair()
 }
 
+var log *locallog.LocalLog
+
+func init() {
+	var err error
+	log, err = locallog.New("logs", 2, 20, 30)
+	if err != nil {
+		panic(err.Error())
+	}
+}
+
 func StartHttpServer() {
 	var err error
-	hs, err = server.New(privateKeyBase64Str)
+	hs, err = server.New(privateKeyBase64Str, log)
 	if err != nil {
 		log.Fatal(err)
 	}

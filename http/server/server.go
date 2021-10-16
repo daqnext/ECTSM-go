@@ -10,6 +10,7 @@ import (
 
 	ecthttp "github.com/daqnext/ECTSM-go/http"
 	"github.com/daqnext/ECTSM-go/utils"
+	locallog "github.com/daqnext/LocalLog/log"
 	go_fast_cache "github.com/daqnext/go-fast-cache"
 )
 
@@ -18,7 +19,7 @@ type EctHttpServer struct {
 	Cache      *go_fast_cache.LocalCache
 }
 
-func New(privateKeyBase64Str string) (*EctHttpServer, error) {
+func New(privateKeyBase64Str string, llog *locallog.LocalLog) (*EctHttpServer, error) {
 	hs := &EctHttpServer{}
 
 	privateKey, err := utils.StrBase64ToPrivateKey(privateKeyBase64Str)
@@ -27,7 +28,10 @@ func New(privateKeyBase64Str string) (*EctHttpServer, error) {
 	}
 	hs.PrivateKey = privateKey
 
-	lc := go_fast_cache.New()
+	lc, err := go_fast_cache.New(llog)
+	if err != nil {
+		return nil, err
+	}
 	hs.Cache = lc
 
 	return hs, nil

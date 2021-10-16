@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 	"github.com/daqnext/ECTSM-go/http/server"
+	locallog "github.com/daqnext/LocalLog/log"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"log"
 	"net/http"
 	"time"
 )
@@ -14,6 +14,15 @@ var privateKeyBase64Str = "bhbb4EC96zx2uUsWDtSYivzaZUzdeDKMfn+dSV9VwUI="
 var publicKeyBase64Str = "BJJlxQFcPuVTjaB/PvbqmN0py98C2iScUQlvpRUm+kpAgqJmnofCely42Hczgb7cqwTZtFTfPwm2ImdmDtvFMH4="
 
 var hs *server.EctHttpServer
+var log *locallog.LocalLog
+
+func init() {
+	var err error
+	log, err = locallog.New("logs", 2, 20, 30)
+	if err != nil {
+		panic(err.Error())
+	}
+}
 
 func main() {
 	StartHttpServer()
@@ -21,7 +30,7 @@ func main() {
 
 func StartHttpServer() {
 	var err error
-	hs, err = server.New(privateKeyBase64Str)
+	hs, err = server.New(privateKeyBase64Str, log)
 	if err != nil {
 		log.Fatal(err)
 	}

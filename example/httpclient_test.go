@@ -3,7 +3,6 @@ package example
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"testing"
 
 	"github.com/daqnext/ECTSM-go/http/client"
