@@ -28,10 +28,7 @@ func New(privateKeyBase64Str string, llog *locallog.LocalLog) (*EctHttpServer, e
 	}
 	hs.PrivateKey = privateKey
 
-	lc, err := go_fast_cache.New(llog)
-	if err != nil {
-		return nil, err
-	}
+	lc := go_fast_cache.New(llog)
 	hs.Cache = lc
 
 	return hs, nil
