@@ -1,0 +1,43 @@
+package main
+
+import (
+	"fmt"
+	"github.com/daqnext/ECTSM-go/http/client"
+	"log"
+)
+
+func main() {
+	//new ecthttpclient instance as a global single instance
+	//publicKeyUrl endpoint to get unix time and public key form server
+	hc, err := client.New("http://127.0.0.1:8080/ectminfo")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//get
+	{
+		url := "http://127.0.0.1:8080/test/get"
+		result := hc.ECTGet(url, []byte("usertoken"))
+		if result.Err != nil {
+			fmt.Println(result.Err)
+		} else {
+			fmt.Println("result:", result.ToString())
+		}
+	}
+
+	//post
+	{
+		sendData := struct {
+			Name  string
+			Email string
+			Phone string
+			Age   int
+		}{"Jack", "jack@gmail.com", "123456789", 19}
+		result := hc.ECTPost("http://127.0.0.1:8080/test/post", []byte("userToken"), sendData)
+		if result.Err != nil {
+			fmt.Println(result.Err)
+		} else {
+			fmt.Println("result:", result.ToJson().GetContentAsString())
+		}
+	}
+}
